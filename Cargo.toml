@@ -1,14 +1,6 @@
 [workspace]
 members = ["packages/*", "contracts/*"]
 
-[profile.release.package.cw1-subkeys]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.cw1-whitelist]
-codegen-units = 1
-incremental = false
-
 [profile.release.package.cw3-fixed-multisig]
 codegen-units = 1
 incremental = false
@@ -26,14 +18,6 @@ codegen-units = 1
 incremental = false
 
 [profile.release.package.cw20-base]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.cw20-ics20]
-codegen-units = 1
-incremental = false
-
-[profile.release.package.cw1155-base]
 codegen-units = 1
 incremental = false
 

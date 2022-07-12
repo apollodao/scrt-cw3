@@ -17,14 +17,14 @@ fi
 STORAGE_PACKAGES="storage-plus"
 # these are imported by other packages
 BASE_PACKAGES="utils"
-ALL_PACKAGES="controllers cw1 cw2 cw3 cw4 cw20 cw1155 multi-test"
+ALL_PACKAGES="controllers cw2 cw3 cw4 cw20 multi-test"
 
 # This is imported by cw3-fixed-multisig, which is imported by cw3-flex-multisig
 # need to make a separate category to remove race conditions
 CW20_BASE="cw20-base"
 # these are imported by other contracts
-BASE_CONTRACTS="cw1-whitelist cw4-group cw3-fixed-multisig "
-ALL_CONTRACTS="cw1-subkeys cw3-flex-multisig cw4-stake cw20-ics20 cw1155-base"
+BASE_CONTRACTS="cw4-group cw3-fixed-multisig "
+ALL_CONTRACTS="cw3-flex-multisig cw4-stake"
 
 SLEEP_TIME=30
 
