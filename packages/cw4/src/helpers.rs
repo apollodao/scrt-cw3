@@ -18,20 +18,27 @@ use cw_storage_plus::{Item, Map};
 ///
 /// If you wish to persist this, convert to Cw4CanonicalContract via .canonical()
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Cw4Contract(pub Addr);
+pub struct Cw4Contract {
+    pub addr: Addr,
+    pub code_hash: String,
+}
 
 impl Cw4Contract {
-    pub fn new(addr: Addr) -> Self {
-        Cw4Contract(addr)
+    pub fn new(addr: Addr, code_hash: String) -> Self {
+        Cw4Contract { addr, code_hash }
     }
 
     pub fn addr(&self) -> Addr {
-        self.0.clone()
+        self.addr.clone()
+    }
+    pub fn code_hash(&self) -> String {
+        self.code_hash.clone()
     }
 
     fn encode_msg(&self, msg: Cw4ExecuteMsg) -> StdResult<CosmosMsg> {
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
             funds: vec![],
         }
@@ -58,6 +65,7 @@ impl Cw4Contract {
     fn encode_smart_query<Q: CustomQuery>(&self, msg: Cw4QueryMsg) -> StdResult<QueryRequest<Q>> {
         Ok(WasmQuery::Smart {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
         }
         .into())

@@ -187,6 +187,7 @@ pub fn execute_send_from(
     info: MessageInfo,
     owner: String,
     contract: String,
+    recipient_code_hash: String,
     amount: Uint128,
     msg: Binary,
 ) -> Result<Response, ContractError> {
@@ -224,7 +225,7 @@ pub fn execute_send_from(
         amount,
         msg,
     }
-    .into_cosmos_msg(contract)?;
+    .into_cosmos_msg(recipient_code_hash, contract)?;
 
     let res = Response::new().add_message(msg).add_attributes(attrs);
     Ok(res)
@@ -667,6 +668,7 @@ mod tests {
             owner: owner.clone(),
             amount: transfer,
             contract: contract.clone(),
+            recipient_code_hash: "test_code_hash".into(),
             msg: send_msg.clone(),
         };
         let info = mock_info(spender.as_ref(), &[]);
@@ -687,6 +689,7 @@ mod tests {
             res.messages[0],
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract.clone(),
+                code_hash: "test_code_hash".into(),
                 msg: binary_msg,
                 funds: vec![],
             }))
@@ -712,6 +715,7 @@ mod tests {
             owner: owner.clone(),
             amount: Uint128::new(33443),
             contract: contract.clone(),
+            recipient_code_hash: "test_code_hash".into(),
             msg: send_msg.clone(),
         };
         let info = mock_info(spender.as_ref(), &[]);
@@ -734,6 +738,7 @@ mod tests {
             owner,
             amount: Uint128::new(33443),
             contract,
+            recipient_code_hash: "test_code_hash".into(),
             msg: send_msg,
         };
         let info = mock_info(spender.as_ref(), &[]);

@@ -432,7 +432,7 @@ fn list_voters(
 mod tests {
     use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, Decimal, Timestamp};
 
-    use cw2::{query_contract_info, ContractVersion};
+    use cw2::ContractVersion;
     use cw4::{Cw4ExecuteMsg, Member};
     use cw4_group::helpers::Cw4GroupContract;
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
@@ -685,20 +685,22 @@ mod tests {
             )
             .unwrap();
 
+        // NOTE: Commented out as Secret does not support raw queries.
         // Verify contract version set properly
-        let version = query_contract_info(&app, flex_addr.clone()).unwrap();
-        assert_eq!(
-            ContractVersion {
-                contract: CONTRACT_NAME.to_string(),
-                version: CONTRACT_VERSION.to_string(),
-            },
-            version,
-        );
+        // let version = query_contract_info(&app, flex_addr.clone()).unwrap();
+        // assert_eq!(
+        //     ContractVersion {
+        //         contract: CONTRACT_NAME.to_string(),
+        //         version: CONTRACT_VERSION.to_string(),
+        //     },
+        //     version,
+        // );
 
         // Get voters query
         let voters: VoterListResponse = app
             .wrap()
             .query_wasm_smart(
+                "test_code_hash",
                 &flex_addr,
                 &QueryMsg::ListVoters {
                     start_after: None,
@@ -789,7 +791,10 @@ mod tests {
             start_after: None,
             limit: None,
         };
-        let votes: VoteListResponse = app.wrap().query_wasm_smart(flex_addr, &voters).unwrap();
+        let votes: VoteListResponse = app
+            .wrap()
+            .query_wasm_smart("test_code_hash", flex_addr, &voters)
+            .unwrap();
         // Sum the weights of the Yes votes to get the tally
         votes
             .votes
@@ -867,7 +872,7 @@ mod tests {
         };
         let res: ProposalListResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &list_query)
+            .query_wasm_smart("test_code_hash", &flex_addr, &list_query)
             .unwrap();
         assert_eq!(3, res.proposals.len());
 
@@ -895,7 +900,7 @@ mod tests {
         };
         let res: ProposalListResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &list_query)
+            .query_wasm_smart("test_code_hash", &flex_addr, &list_query)
             .unwrap();
         assert_eq!(1, res.proposals.len());
 
@@ -1038,7 +1043,11 @@ mod tests {
         let voter = OWNER.into();
         let vote: VoteResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Vote { proposal_id, voter })
+            .query_wasm_smart(
+                "test_code_hash",
+                &flex_addr,
+                &QueryMsg::Vote { proposal_id, voter },
+            )
             .unwrap();
         assert_eq!(
             vote.vote.unwrap(),
@@ -1054,7 +1063,11 @@ mod tests {
         let voter = VOTER2.into();
         let vote: VoteResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Vote { proposal_id, voter })
+            .query_wasm_smart(
+                "test_code_hash",
+                &flex_addr,
+                &QueryMsg::Vote { proposal_id, voter },
+            )
             .unwrap();
         assert_eq!(
             vote.vote.unwrap(),
@@ -1070,7 +1083,11 @@ mod tests {
         let voter = VOTER5.into();
         let vote: VoteResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Vote { proposal_id, voter })
+            .query_wasm_smart(
+                "test_code_hash",
+                &flex_addr,
+                &QueryMsg::Vote { proposal_id, voter },
+            )
             .unwrap();
         assert!(vote.vote.is_none());
 
@@ -1390,7 +1407,11 @@ mod tests {
         // Proposal should now be passed.
         let prop: ProposalResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Proposal { proposal_id })
+            .query_wasm_smart(
+                "test_code_hash",
+                &flex_addr,
+                &QueryMsg::Proposal { proposal_id },
+            )
             .unwrap();
         assert_eq!(prop.status, Status::Passed);
 
@@ -1489,7 +1510,7 @@ mod tests {
             let query_prop = QueryMsg::Proposal { proposal_id };
             let prop: ProposalResponse = app
                 .wrap()
-                .query_wasm_smart(&flex_addr, &query_prop)
+                .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
                 .unwrap();
             prop.status
         };
@@ -1500,7 +1521,7 @@ mod tests {
         // check current threshold (global)
         let threshold: ThresholdResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Threshold {})
+            .query_wasm_smart("test_code_hash", &flex_addr, &QueryMsg::Threshold {})
             .unwrap();
         let expected_thresh = ThresholdResponse::ThresholdQuorum {
             total_weight: 23,
@@ -1530,7 +1551,7 @@ mod tests {
         };
         let power: VoterResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &query_voter)
+            .query_wasm_smart("test_code_hash", &flex_addr, &query_voter)
             .unwrap();
         assert_eq!(power.weight, None);
 
@@ -1579,7 +1600,7 @@ mod tests {
         // check current threshold (global) is updated
         let threshold: ThresholdResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &QueryMsg::Threshold {})
+            .query_wasm_smart("test_code_hash", &flex_addr, &QueryMsg::Threshold {})
             .unwrap();
         let expected_thresh = ThresholdResponse::ThresholdQuorum {
             total_weight: 41,
@@ -1647,7 +1668,7 @@ mod tests {
             let query_prop = QueryMsg::Proposal { proposal_id };
             let prop: ProposalResponse = app
                 .wrap()
-                .query_wasm_smart(&flex_addr, &query_prop)
+                .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
                 .unwrap();
             prop.status
         };
@@ -1735,7 +1756,7 @@ mod tests {
             let query_prop = QueryMsg::Proposal { proposal_id };
             let prop: ProposalResponse = app
                 .wrap()
-                .query_wasm_smart(&flex_addr, &query_prop)
+                .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
                 .unwrap();
             prop.status
         };
@@ -1782,7 +1803,7 @@ mod tests {
         };
         let prop: ProposalResponse = app
             .wrap()
-            .query_wasm_smart(&flex_addr, &query_prop)
+            .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
             .unwrap();
         assert_eq!(Status::Passed, prop.status);
     }
@@ -1819,7 +1840,7 @@ mod tests {
             let query_prop = QueryMsg::Proposal { proposal_id };
             let prop: ProposalResponse = app
                 .wrap()
-                .query_wasm_smart(&flex_addr, &query_prop)
+                .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
                 .unwrap();
             prop.status
         };
@@ -1890,7 +1911,7 @@ mod tests {
             let query_prop = QueryMsg::Proposal { proposal_id };
             let prop: ProposalResponse = app
                 .wrap()
-                .query_wasm_smart(&flex_addr, &query_prop)
+                .query_wasm_smart("test_code_hash", &flex_addr, &query_prop)
                 .unwrap();
             prop.status
         };

@@ -14,7 +14,7 @@ use crate::allowances::{
     execute_burn_from, execute_decrease_allowance, execute_increase_allowance, execute_send_from,
     execute_transfer_from, query_allowance,
 };
-use crate::enumerable::{query_all_accounts, query_all_allowances};
+// use crate::enumerable::{query_all_accounts, query_all_allowances};
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{MinterData, TokenInfo, BALANCES, LOGO, MARKETING_INFO, TOKEN_INFO};
@@ -193,9 +193,10 @@ pub fn execute(
         ExecuteMsg::Burn { amount } => execute_burn(deps, env, info, amount),
         ExecuteMsg::Send {
             contract,
+            recipient_code_hash,
             amount,
             msg,
-        } => execute_send(deps, env, info, contract, amount, msg),
+        } => execute_send(deps, env, info, contract, recipient_code_hash, amount, msg),
         ExecuteMsg::Mint { recipient, amount } => execute_mint(deps, env, info, recipient, amount),
         ExecuteMsg::IncreaseAllowance {
             spender,
@@ -216,9 +217,19 @@ pub fn execute(
         ExecuteMsg::SendFrom {
             owner,
             contract,
+            recipient_code_hash,
             amount,
             msg,
-        } => execute_send_from(deps, env, info, owner, contract, amount, msg),
+        } => execute_send_from(
+            deps,
+            env,
+            info,
+            owner,
+            contract,
+            recipient_code_hash,
+            amount,
+            msg,
+        ),
         ExecuteMsg::UpdateMarketing {
             project,
             description,
@@ -350,6 +361,7 @@ pub fn execute_send(
     _env: Env,
     info: MessageInfo,
     contract: String,
+    recipient_code_hash: String,
     amount: Uint128,
     msg: Binary,
 ) -> Result<Response, ContractError> {
@@ -384,7 +396,7 @@ pub fn execute_send(
                 amount,
                 msg,
             }
-            .into_cosmos_msg(contract)?,
+            .into_cosmos_msg(recipient_code_hash, contract)?,
         );
     Ok(res)
 }
@@ -515,14 +527,15 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Allowance { owner, spender } => {
             to_binary(&query_allowance(deps, owner, spender)?)
         }
-        QueryMsg::AllAllowances {
-            owner,
-            start_after,
-            limit,
-        } => to_binary(&query_all_allowances(deps, owner, start_after, limit)?),
-        QueryMsg::AllAccounts { start_after, limit } => {
-            to_binary(&query_all_accounts(deps, start_after, limit)?)
-        }
+        //NOTE: Commented out because Secret does not support iterators
+        // QueryMsg::AllAllowances {
+        //     owner,
+        //     start_after,
+        //     limit,
+        // } => to_binary(&query_all_allowances(deps, owner, start_after, limit)?),
+        // QueryMsg::AllAccounts { start_after, limit } => {
+        //     to_binary(&query_all_accounts(deps, start_after, limit)?)
+        // }
         QueryMsg::MarketingInfo {} => to_binary(&query_marketing_info(deps)?),
         QueryMsg::DownloadLogo {} => to_binary(&query_download_logo(deps)?),
     }
@@ -1208,6 +1221,7 @@ mod tests {
         let env = mock_env();
         let msg = ExecuteMsg::Send {
             contract: contract.clone(),
+            recipient_code_hash: "test_code_hash".into(),
             amount: Uint128::zero(),
             msg: send_msg.clone(),
         };
@@ -1219,6 +1233,7 @@ mod tests {
         let env = mock_env();
         let msg = ExecuteMsg::Send {
             contract: contract.clone(),
+            recipient_code_hash: "test_code_hash".into(),
             amount: too_much,
             msg: send_msg.clone(),
         };
@@ -1230,6 +1245,7 @@ mod tests {
         let env = mock_env();
         let msg = ExecuteMsg::Send {
             contract: contract.clone(),
+            recipient_code_hash: "test_code_hash".into(),
             amount: transfer,
             msg: send_msg.clone(),
         };
@@ -1250,6 +1266,7 @@ mod tests {
             res.messages[0],
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract.clone(),
+                code_hash: "test_code_hash".into(),
                 msg: binary_msg,
                 funds: vec![],
             }))

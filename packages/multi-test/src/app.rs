@@ -6,7 +6,7 @@ use anyhow::Result as AnyResult;
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
-    Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage, SystemError,
+    Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Storage, SystemError,
     SystemResult,
 };
 use schemars::JsonSchema;
@@ -567,10 +567,11 @@ where
         self.read_module(|router, _, storage| router.wasm.load_contract(storage, address))
     }
 
-    /// This gets a raw state dump of all key-values held by a given contract
-    pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
-        self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
-    }
+    //NOTE: Commented out because Secret does not support iterators
+    // This gets a raw state dump of all key-values held by a given contract
+    // pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
+    //     self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
+    // }
 }
 
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>
@@ -1156,13 +1157,18 @@ mod test {
         // reflect count is 1
         let qres: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &reflect_addr,
+                &reflect::QueryMsg::Count {},
+            )
             .unwrap();
         assert_eq!(0, qres.count);
 
         // reflecting payout message pays reflect contract
         let msg = SubMsg::new(WasmMsg::Execute {
             contract_addr: payout_addr.clone().into(),
+            code_hash: "test_code_hash".into(),
             msg: b"{}".into(),
             funds: vec![],
         });
@@ -1211,7 +1217,11 @@ mod test {
         // reflect count updated
         let qres: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &reflect_addr,
+                &reflect::QueryMsg::Count {},
+            )
             .unwrap();
         assert_eq!(1, qres.count);
     }
@@ -1275,7 +1285,11 @@ mod test {
         // reflect count should be updated to 1
         let qres: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &reflect_addr,
+                &reflect::QueryMsg::Count {},
+            )
             .unwrap();
         assert_eq!(1, qres.count);
 
@@ -1306,7 +1320,11 @@ mod test {
         // failure should not update reflect count
         let qres: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &reflect_addr,
+                &reflect::QueryMsg::Count {},
+            )
             .unwrap();
         assert_eq!(1, qres.count);
     }
@@ -1334,7 +1352,7 @@ mod test {
         // count is 1
         let payout::CountResponse { count } = app
             .wrap()
-            .query_wasm_smart(&payout_addr, &payout::QueryMsg::Count {})
+            .query_wasm_smart("test_code_hash", &payout_addr, &payout::QueryMsg::Count {})
             .unwrap();
         assert_eq!(1, count);
 
@@ -1345,7 +1363,7 @@ mod test {
         // count is 25
         let payout::CountResponse { count } = app
             .wrap()
-            .query_wasm_smart(&payout_addr, &payout::QueryMsg::Count {})
+            .query_wasm_smart("test_code_hash", &payout_addr, &payout::QueryMsg::Count {})
             .unwrap();
         assert_eq!(25, count);
 
@@ -1359,7 +1377,7 @@ mod test {
 
         let payout::CountResponse { count } = app
             .wrap()
-            .query_wasm_smart(&payout_addr, &payout::QueryMsg::Count {})
+            .query_wasm_smart("test_code_hash", &payout_addr, &payout::QueryMsg::Count {})
             .unwrap();
         assert_eq!(49, count);
     }
@@ -1538,7 +1556,9 @@ mod test {
 
         // no reply writen beforehand
         let query = reflect::QueryMsg::Reply { id: 123 };
-        let res: StdResult<Reply> = app.wrap().query_wasm_smart(&reflect_addr, &query);
+        let res: StdResult<Reply> =
+            app.wrap()
+                .query_wasm_smart("test_code_hash", &reflect_addr, &query);
         res.unwrap_err();
 
         // reflect sends 7 eth, success
@@ -1568,7 +1588,10 @@ mod test {
         res.assert_event(&Event::new("wasm-custom").add_attribute("from", "reply"));
 
         // ensure success was written
-        let res: Reply = app.wrap().query_wasm_smart(&reflect_addr, &query).unwrap();
+        let res: Reply = app
+            .wrap()
+            .query_wasm_smart("test_code_hash", &reflect_addr, &query)
+            .unwrap();
         assert_eq!(res.id, 123);
         // validate the events written in the reply blob...should just be bank transfer
         let reply = res.result.unwrap();
@@ -1593,7 +1616,10 @@ mod test {
 
         // ensure error was written
         let query = reflect::QueryMsg::Reply { id: 456 };
-        let res: Reply = app.wrap().query_wasm_smart(&reflect_addr, &query).unwrap();
+        let res: Reply = app
+            .wrap()
+            .query_wasm_smart("test_code_hash", &reflect_addr, &query)
+            .unwrap();
         assert_eq!(res.id, 456);
         assert!(res.result.is_err());
         // TODO: check error?
@@ -1795,7 +1821,11 @@ mod test {
         // check beneficiary set properly
         let state: hackatom::InstantiateMsg = app
             .wrap()
-            .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &contract,
+                &hackatom::QueryMsg::Beneficiary {},
+            )
             .unwrap();
         assert_eq!(state.beneficiary, beneficiary);
 
@@ -1823,7 +1853,11 @@ mod test {
         // check beneficiary updated
         let state: hackatom::InstantiateMsg = app
             .wrap()
-            .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
+            .query_wasm_smart(
+                "test_code_hash",
+                &contract,
+                &hackatom::QueryMsg::Beneficiary {},
+            )
             .unwrap();
         assert_eq!(state.beneficiary, random);
     }
@@ -1843,6 +1877,7 @@ mod test {
             SubMsg::reply_always(
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: contract.into(),
+                    code_hash: "test_code_hash".into(),
                     msg: to_binary(&echo::Message {
                         data,
                         sub_msg,
@@ -1863,6 +1898,7 @@ mod test {
             let data = data.into().map(|s| s.to_owned());
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract.into(),
+                code_hash: "test_code_hash".into(),
                 msg: to_binary(&echo::Message {
                     data,
                     sub_msg,
@@ -2059,6 +2095,7 @@ mod test {
             let reflect_msg = reflect::Message {
                 messages: vec![SubMsg::new(WasmMsg::Execute {
                     contract_addr: echo_addr.to_string(),
+                    code_hash: "test_code_hash".into(),
                     msg: to_binary(&echo_msg).unwrap(),
                     funds: vec![],
                 })],
@@ -2467,7 +2504,8 @@ mod test {
             let code_id = app.store_code(reflect::contract());
             let init_msg = to_binary(&EmptyMsg {}).unwrap();
             let msg = WasmMsg::Instantiate {
-                admin: None,
+                // admin: None,
+                code_hash: "test_code_hash".into(),
                 code_id,
                 msg: init_msg,
                 funds: vec![],
@@ -2482,7 +2520,11 @@ mod test {
 
             let count: payout::CountResponse = app
                 .wrap()
-                .query_wasm_smart(&parsed.contract_address, &reflect::QueryMsg::Count {})
+                .query_wasm_smart(
+                    "test_code_hash",
+                    &parsed.contract_address,
+                    &reflect::QueryMsg::Count {},
+                )
                 .unwrap();
             assert_eq!(count.count, 0);
         }
@@ -2500,7 +2542,8 @@ mod test {
             };
             let init_msg = to_binary(&msg).unwrap();
             let msg = WasmMsg::Instantiate {
-                admin: None,
+                // admin: None,
+                code_hash: "test_code_hash".into(),
                 code_id,
                 msg: init_msg,
                 funds: vec![],
@@ -2537,6 +2580,7 @@ mod test {
             };
             let sub_msg = SubMsg::reply_on_success(
                 WasmMsg::Execute {
+                    code_hash: "test_code_hash".into(),
                     contract_addr: addr1.to_string(),
                     msg: to_binary(&msg).unwrap(),
                     funds: vec![],
@@ -2549,7 +2593,8 @@ mod test {
             };
             let init_msg = to_binary(&init_msg).unwrap();
             let msg = WasmMsg::Instantiate {
-                admin: None,
+                // admin: None,
+                code_hash: "test_code_hash".into(),
                 code_id,
                 msg: init_msg,
                 funds: vec![],
@@ -2665,6 +2710,7 @@ mod test {
 
             // execute should error
             let msg = WasmMsg::Execute {
+                code_hash: "test_code_hash".into(),
                 contract_addr: error_addr.into(),
                 msg: to_binary(&EmptyMsg {}).unwrap(),
                 funds: vec![],
@@ -2709,7 +2755,9 @@ mod test {
             // caller1 calls caller2, caller2 calls error
             let msg = WasmMsg::Execute {
                 contract_addr: caller_addr2.into(),
+                code_hash: "test_code_hash".into(),
                 msg: to_binary(&WasmMsg::Execute {
+                    code_hash: "test_code_hash".into(),
                     contract_addr: error_addr.into(),
                     msg: to_binary(&EmptyMsg {}).unwrap(),
                     funds: vec![],

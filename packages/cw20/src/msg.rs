@@ -16,6 +16,7 @@ pub enum Cw20ExecuteMsg {
     /// on the receiving contract.
     Send {
         contract: String,
+        recipient_code_hash: String,
         amount: Uint128,
         msg: Binary,
     },
@@ -47,6 +48,7 @@ pub enum Cw20ExecuteMsg {
     SendFrom {
         owner: String,
         contract: String,
+        recipient_code_hash: String,
         amount: Uint128,
         msg: Binary,
     },

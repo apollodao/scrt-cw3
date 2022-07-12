@@ -98,10 +98,7 @@ impl<'a> Claims<'a> {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{
-        testing::{mock_dependencies, mock_env},
-        Order,
-    };
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     use super::*;
     const TEST_AMOUNT: u128 = 1000u128;
@@ -114,21 +111,22 @@ mod test {
         assert_eq!(claim.release_at, TEST_EXPIRATION);
     }
 
-    #[test]
-    fn can_create_claims() {
-        let deps = mock_dependencies();
-        let claims = Claims::new("claims");
-        // Assert that claims creates a map and there are no keys in the map.
-        assert_eq!(
-            claims
-                .0
-                .range_raw(&deps.storage, None, None, Order::Ascending)
-                .collect::<StdResult<Vec<_>>>()
-                .unwrap()
-                .len(),
-            0
-        );
-    }
+    // Note: Commented out because Secret does not support iterators
+    // #[test]
+    // fn can_create_claims() {
+    //     let deps = mock_dependencies();
+    //     let claims = Claims::new("claims");
+    //     // Assert that claims creates a map and there are no keys in the map.
+    //     assert_eq!(
+    //         claims
+    //             .0
+    //             .range_raw(&deps.storage, None, None, Order::Ascending)
+    //             .collect::<StdResult<Vec<_>>>()
+    //             .unwrap()
+    //             .len(),
+    //         0
+    //     );
+    // }
 
     #[test]
     fn check_create_claim_updates_map() {

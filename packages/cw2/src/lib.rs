@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Empty, Querier, QuerierWrapper, QueryRequest, StdResult, Storage, WasmQuery};
+use cosmwasm_std::{StdResult, Storage};
 use cw_storage_plus::Item;
 
 pub const CONTRACT: Item<ContractVersion> = Item::new("contract_info");
@@ -37,21 +37,22 @@ pub fn set_contract_version<T: Into<String>, U: Into<String>>(
     CONTRACT.save(store, &val)
 }
 
+/// NOTE: Commented out because Secret does not support Raw Queries.
 /// This will make a raw_query to another contract to determine the current version it
 /// claims to be. This should not be trusted, but could be used as a quick filter
 /// if the other contract exists and claims to be a cw20-base contract for example.
 /// (Note: you usually want to require *interfaces* not *implementations* of the
 /// contracts you compose with, so be careful of overuse)
-pub fn query_contract_info<Q: Querier, T: Into<String>>(
-    querier: &Q,
-    contract_addr: T,
-) -> StdResult<ContractVersion> {
-    let req = QueryRequest::Wasm(WasmQuery::Raw {
-        contract_addr: contract_addr.into(),
-        key: CONTRACT.as_slice().into(),
-    });
-    QuerierWrapper::<Empty>::new(querier).query(&req)
-}
+// pub fn query_contract_info<Q: Querier, T: Into<String>>(
+//     querier: &Q,
+//     contract_addr: T,
+// ) -> StdResult<ContractVersion> {
+//     let req = QueryRequest::Wasm(WasmQuery::Raw {
+//         contract_addr: contract_addr.into(),
+//         key: CONTRACT.as_slice().into(),
+//     });
+//     QuerierWrapper::<Empty>::new(querier).query(&req)
+// }
 
 #[cfg(test)]
 mod tests {

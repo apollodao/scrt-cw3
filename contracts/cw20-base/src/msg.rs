@@ -85,21 +85,22 @@ pub enum QueryMsg {
     /// Returns how much spender can use from owner account, 0 if unset.
     /// Return type: AllowanceResponse.
     Allowance { owner: String, spender: String },
+    /// NOTE: Commented out because Secret does not support iterators
     /// Only with "enumerable" extension (and "allowances")
     /// Returns all allowances this owner has approved. Supports pagination.
     /// Return type: AllAllowancesResponse.
-    AllAllowances {
-        owner: String,
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
+    // AllAllowances {
+    //     owner: String,
+    //     start_after: Option<String>,
+    //     limit: Option<u32>,
+    // },
     /// Only with "enumerable" extension
     /// Returns all accounts that have balances. Supports pagination.
     /// Return type: AllAccountsResponse.
-    AllAccounts {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
+    // AllAccounts {
+    //     start_after: Option<String>,
+    //     limit: Option<u32>,
+    // },
     /// Only with "marketing" extension
     /// Returns more metadata on the contract to display in the client:
     /// - description, logo, project url, etc.

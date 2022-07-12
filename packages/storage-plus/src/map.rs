@@ -6,7 +6,6 @@ use std::marker::PhantomData;
 use crate::bound::{Bound, PrefixBound};
 #[cfg(feature = "iterator")]
 use crate::de::KeyDeserialize;
-use crate::helpers::query_raw;
 #[cfg(feature = "iterator")]
 use crate::iter_helpers::{deserialize_kv, deserialize_v};
 #[cfg(feature = "iterator")]
@@ -15,7 +14,7 @@ use crate::keys::{Key, PrimaryKey};
 use crate::path::Path;
 #[cfg(feature = "iterator")]
 use crate::prefix::{namespaced_prefix_range, Prefix};
-use cosmwasm_std::{from_slice, Addr, CustomQuery, QuerierWrapper, StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 
 #[derive(Debug, Clone)]
 pub struct Map<'a, K, T> {
@@ -93,22 +92,25 @@ where
         self.key(k).update(store, action)
     }
 
-    /// If you import the proper Map from the remote contract, this will let you read the data
-    /// from a remote contract in a type-safe way using WasmQuery::RawQuery
-    pub fn query<Q: CustomQuery>(
-        &self,
-        querier: &QuerierWrapper<Q>,
-        remote_contract: Addr,
-        k: K,
-    ) -> StdResult<Option<T>> {
-        let key = self.key(k).storage_key.into();
-        let result = query_raw(querier, remote_contract, key)?;
-        if result.is_empty() {
-            Ok(None)
-        } else {
-            from_slice(&result).map(Some)
-        }
-    }
+    // TODO: Removed because SCRT does not support WasmQuery::Raw.
+    // Figure out a workaround.
+    //
+    // If you import the proper Map from the remote contract, this will let you read the data
+    // from a remote contract in a type-safe way using WasmQuery::RawQuery
+    // pub fn query<Q: CustomQuery>(
+    //     &self,
+    //     querier: &QuerierWrapper<Q>,
+    //     remote_contract: Addr,
+    //     k: K,
+    // ) -> StdResult<Option<T>> {
+    //     let key = self.key(k).storage_key.into();
+    //     let result = query_raw(querier, remote_contract, key)?;
+    //     if result.is_empty() {
+    //         Ok(None)
+    //     } else {
+    //         from_slice(&result).map(Some)
+    //     }
+    // }
 }
 
 #[cfg(feature = "iterator")]

@@ -127,7 +127,11 @@ where
         request: WasmQuery,
     ) -> AnyResult<Binary> {
         match request {
-            WasmQuery::Smart { contract_addr, msg } => {
+            WasmQuery::Smart {
+                code_hash,
+                contract_addr,
+                msg,
+            } => {
                 let addr = api.addr_validate(&contract_addr)?;
                 self.query_smart(addr, api, storage, querier, block, msg.into())
             }
@@ -139,7 +143,7 @@ where
                 let addr = api.addr_validate(&contract_addr)?;
                 let contract = self.load_contract(storage, &addr)?;
                 let mut res = ContractInfoResponse::new(contract.code_id as u64, contract.creator);
-                res.admin = contract.admin.map(|x| x.into());
+                // res.admin = contract.admin.map(|x| x.into());
                 to_binary(&res).map_err(Into::into)
             }
             query => bail!(Error::UnsupportedWasmQuery(query)),

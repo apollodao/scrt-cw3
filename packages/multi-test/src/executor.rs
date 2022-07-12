@@ -74,6 +74,7 @@ where
     fn instantiate_contract<T: Serialize, U: Into<String>>(
         &mut self,
         code_id: u64,
+        code_hash: String,
         sender: Addr,
         init_msg: &T,
         send_funds: &[Coin],
@@ -83,7 +84,8 @@ where
         // instantiate contract
         let init_msg = to_binary(init_msg)?;
         let msg = WasmMsg::Instantiate {
-            admin,
+            // admin,
+            code_hash,
             code_id,
             msg: init_msg,
             funds: send_funds.to_vec(),
@@ -101,12 +103,14 @@ where
         &mut self,
         sender: Addr,
         contract_addr: Addr,
+        code_hash: String,
         msg: &T,
         send_funds: &[Coin],
     ) -> AnyResult<AppResponse> {
         let binary_msg = to_binary(msg)?;
         let wrapped_msg = WasmMsg::Execute {
             contract_addr: contract_addr.into_string(),
+            code_hash,
             msg: binary_msg,
             funds: send_funds.to_vec(),
         };
@@ -117,23 +121,26 @@ where
         Ok(res)
     }
 
+    /// NOTE: Commented out because Secret does not support Migrations.
     /// Migrate a contract. Sender must be registered admin.
     /// This is just a helper around execute()
-    fn migrate_contract<T: Serialize>(
-        &mut self,
-        sender: Addr,
-        contract_addr: Addr,
-        msg: &T,
-        new_code_id: u64,
-    ) -> AnyResult<AppResponse> {
-        let msg = to_binary(msg)?;
-        let msg = WasmMsg::Migrate {
-            contract_addr: contract_addr.into(),
-            msg,
-            new_code_id,
-        };
-        self.execute(sender, msg.into())
-    }
+    // fn migrate_contract<T: Serialize>(
+    //     &mut self,
+    //     sender: Addr,
+    //     contract_addr: Addr,
+    //     code_hash: String,
+    //     msg: &T,
+    //     new_code_id: u64,
+    // ) -> AnyResult<AppResponse> {
+    //     let msg = to_binary(msg)?;
+    //     let msg = WasmMsg::Migrate {
+    //         contract_addr: contract_addr.into(),
+    //         code_hash,
+    //         msg,
+    //         new_code_id,
+    //     };
+    //     self.execute(sender, msg.into())
+    // }
 
     fn send_tokens(
         &mut self,

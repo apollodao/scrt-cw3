@@ -430,7 +430,7 @@ name = "cw-multi-test"
 version = "0.13.4"
 dependencies = [
  "anyhow",
- "cosmwasm-std 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw-utils",
@@ -469,7 +469,7 @@ dependencies = [
 name = "cw2"
 version = "0.13.4"
 dependencies = [
- "cosmwasm-std 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-storage-plus",
  "schemars",
  "serde",
