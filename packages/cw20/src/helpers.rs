@@ -16,17 +16,25 @@ use crate::{
 ///
 /// If you wish to persist this, convert to Cw20CanonicalContract via .canonical()
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Cw20Contract(pub Addr);
+pub struct Cw20Contract {
+    pub addr: Addr,
+    pub code_hash: String,
+}
 
 impl Cw20Contract {
     pub fn addr(&self) -> Addr {
-        self.0.clone()
+        self.addr.clone()
+    }
+
+    pub fn code_hash(&self) -> String {
+        self.code_hash.clone()
     }
 
     pub fn call<T: Into<Cw20ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
         let msg = to_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash.clone(),
             msg,
             funds: vec![],
         }
@@ -45,6 +53,7 @@ impl Cw20Contract {
         };
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
         }
         .into();
@@ -62,6 +71,7 @@ impl Cw20Contract {
         let msg = Cw20QueryMsg::TokenInfo {};
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
         }
         .into();
@@ -87,6 +97,7 @@ impl Cw20Contract {
         };
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
         }
         .into();
@@ -102,6 +113,7 @@ impl Cw20Contract {
         let msg = Cw20QueryMsg::Minter {};
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash(),
             msg: to_binary(&msg)?,
         }
         .into();

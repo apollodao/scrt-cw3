@@ -103,6 +103,7 @@ fn cw3_controls_cw20() {
     };
 
     let execute_mint_msg = WasmMsg::Execute {
+        code_hash: "test_code_hash".into(),
         contract_addr: cw20_addr.to_string(),
         msg: to_binary(&cw20_mint_msg).unwrap(),
         funds: vec![],

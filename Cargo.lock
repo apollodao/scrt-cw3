@@ -179,10 +179,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmwasm-crypto"
+version = "1.0.0"
+source = "git+https://github.com/scrtlabs/cosmwasm?branch=secret#ae7272784f38fd58a4065d194a91cc9b4f5e5fa7"
+dependencies = [
+ "digest",
+ "ed25519-zebra",
+ "k256",
+ "rand_core 0.6.3",
+ "thiserror",
+]
+
+[[package]]
 name = "cosmwasm-derive"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b36e527620a2a3e00e46b6e731ab6c9b68d11069c986f7d7be8eba79ef081a4"
+dependencies = [
+ "syn",
+]
+
+[[package]]
+name = "cosmwasm-derive"
+version = "1.0.0"
+source = "git+https://github.com/scrtlabs/cosmwasm?branch=secret#ae7272784f38fd58a4065d194a91cc9b4f5e5fa7"
 dependencies = [
  "syn",
 ]
@@ -204,8 +224,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "875994993c2082a6fcd406937bf0fca21c349e4a624f3810253a14fa83a3a195"
 dependencies = [
  "base64",
- "cosmwasm-crypto",
- "cosmwasm-derive",
+ "cosmwasm-crypto 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cosmwasm-derive 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "forward_ref",
+ "schemars",
+ "serde",
+ "serde-json-wasm",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "cosmwasm-std"
+version = "1.0.0"
+source = "git+https://github.com/scrtlabs/cosmwasm?branch=secret#ae7272784f38fd58a4065d194a91cc9b4f5e5fa7"
+dependencies = [
+ "base64",
+ "cosmwasm-crypto 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
+ "cosmwasm-derive 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "forward_ref",
  "schemars",
  "serde",
@@ -220,7 +256,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d18403b07304d15d304dad11040d45bbcaf78d603b4be3fb5e2685c16f9229b5"
 dependencies = [
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
 ]
 
@@ -381,7 +417,7 @@ dependencies = [
 name = "cw-controllers"
 version = "0.13.4"
 dependencies = [
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-storage-plus",
  "cw-utils",
  "schemars",
@@ -394,7 +430,7 @@ name = "cw-multi-test"
 version = "0.13.4"
 dependencies = [
  "anyhow",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw-utils",
@@ -410,7 +446,7 @@ dependencies = [
 name = "cw-storage-plus"
 version = "0.13.4"
 dependencies = [
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "criterion",
  "rand",
  "schemars",
@@ -421,7 +457,7 @@ dependencies = [
 name = "cw-utils"
 version = "0.13.4"
 dependencies = [
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-storage-plus",
  "prost",
  "schemars",
@@ -433,7 +469,7 @@ dependencies = [
 name = "cw2"
 version = "0.13.4"
 dependencies = [
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "cw-storage-plus",
  "schemars",
  "serde",
@@ -444,7 +480,7 @@ name = "cw20"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-utils",
  "schemars",
  "serde",
@@ -455,7 +491,7 @@ name = "cw20-base"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-storage-plus",
  "cw-utils",
  "cw2",
@@ -470,7 +506,7 @@ name = "cw3"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-utils",
  "schemars",
  "serde",
@@ -481,7 +517,7 @@ name = "cw3-fixed-multisig"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
@@ -499,7 +535,7 @@ name = "cw3-flex-multisig"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-multi-test",
  "cw-storage-plus",
  "cw-utils",
@@ -518,7 +554,7 @@ name = "cw4"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-storage-plus",
  "schemars",
  "serde",
@@ -529,7 +565,7 @@ name = "cw4-group"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-controllers",
  "cw-storage-plus",
  "cw-utils",
@@ -545,7 +581,7 @@ name = "cw4-stake"
 version = "0.13.4"
 dependencies = [
  "cosmwasm-schema",
- "cosmwasm-std",
+ "cosmwasm-std 1.0.0 (git+https://github.com/scrtlabs/cosmwasm?branch=secret)",
  "cw-controllers",
  "cw-storage-plus",
  "cw-utils",

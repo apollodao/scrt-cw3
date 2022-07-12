@@ -14,16 +14,16 @@ use cw_utils::Expiration;
 /// FIXME: Cw3Contract currently only supports CosmosMsg<Empty>. When we actually
 /// use this in some consuming code, we should make it generic over CosmosMsg<T>.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Cw3Contract(pub Addr);
+pub struct Cw3Contract {
+    pub addr: Addr,
+    pub code_hash: String,
+}
 
 impl Cw3Contract {
-    pub fn addr(&self) -> Addr {
-        self.0.clone()
-    }
-
     pub fn encode_msg(&self, msg: Cw3ExecuteMsg) -> StdResult<CosmosMsg> {
         Ok(WasmMsg::Execute {
-            contract_addr: self.addr().into(),
+            contract_addr: self.addr.clone().into(),
+            code_hash: self.code_hash.clone(),
             msg: to_binary(&msg)?,
             funds: vec![],
         }
