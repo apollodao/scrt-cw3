@@ -425,68 +425,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cw3-flex-multisig"
-version = "0.13.4"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "cw3",
- "cw3-fixed-multisig",
- "cw4",
- "cw4-group",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw4"
-version = "0.13.4"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "cw4-group"
-version = "0.13.4"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-controllers",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "cw4",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "cw4-stake"
-version = "0.13.4"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-controllers",
- "cw-storage-plus",
- "cw-utils",
- "cw2",
- "cw20",
- "cw4",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "der"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
