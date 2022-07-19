@@ -23,13 +23,14 @@ impl Deref for Cw4GroupContract {
 }
 
 impl Cw4GroupContract {
-    pub fn new(addr: Addr) -> Self {
-        Cw4GroupContract(Cw4Contract(addr))
+    pub fn new(addr: Addr, code_hash: String) -> Self {
+        Cw4GroupContract(Cw4Contract { addr, code_hash })
     }
 
     fn encode_msg(&self, msg: ExecuteMsg) -> StdResult<CosmosMsg> {
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
+            code_hash: self.code_hash,
             msg: to_binary(&msg)?,
             funds: vec![],
         }

@@ -9,9 +9,8 @@ use cosmwasm_std::{
 use crate::msg::Cw4ExecuteMsg;
 use crate::query::HooksResponse;
 use crate::{
-    AdminResponse, Cw4QueryMsg, Member, MemberListResponse, MemberResponse, MEMBERS_KEY, TOTAL_KEY,
+    AdminResponse, Cw4QueryMsg, Member, MemberListResponse, MemberResponse, TotalWeightResponse,
 };
-use cw_storage_plus::{Item, Map};
 
 /// Cw4Contract is a wrapper around Addr that provides a lot of helpers
 /// for working with cw4 contracts
@@ -80,7 +79,9 @@ impl Cw4Contract {
 
     /// Read the total weight
     pub fn total_weight(&self, querier: &QuerierWrapper) -> StdResult<u64> {
-        Item::new(TOTAL_KEY).query(querier, self.addr())
+        let query = self.encode_smart_query(Cw4QueryMsg::TotalWeight {})?;
+        let res: TotalWeightResponse = querier.query(&query)?;
+        Ok(res.weight)
     }
 
     /// Check if this address is a member and returns its weight
@@ -92,7 +93,10 @@ impl Cw4Contract {
     ) -> StdResult<Option<u64>> {
         match height {
             Some(height) => self.member_at_height(querier, member.to_string(), height.into()),
-            None => Map::new(MEMBERS_KEY).query(querier, self.addr(), member),
+            None => querier.query(&self.encode_smart_query(Cw4QueryMsg::Member {
+                addr: member.to_string(),
+                at_height: height,
+            })?),
         }
     }
 
