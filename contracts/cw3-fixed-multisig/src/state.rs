@@ -361,8 +361,6 @@ where
         BinarySearchTreeIterator::new(self.clone(), storage)
     }
 
-    // @next figure out how/if possible to iterate from specified starting node
-    // idea: check if node is right or left of parent - add is_left()/is_right()
     pub fn iter_from(
         &self,
         storage: &'a dyn Storage,
@@ -393,19 +391,11 @@ where
             };
             stack.push(node);
         }
-        println!(
-            "STACK GOING INTO ITERATOR {:#?}",
-            stack
-                .iter()
-                .map(|n| n.load(storage).unwrap())
-                .collect::<Vec<_>>()
-        );
         let iter = BinarySearchTreeIterator {
             current: BinarySearchTree::new(b"iter_root"),
             storage,
             stack,
         };
-        println!("Current before start: {:#?}", iter.current);
         Ok(iter)
     }
 }
@@ -435,33 +425,12 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let mut item: Option<T> = None;
         while !self.stack.is_empty() || !self.current.is_empty(self.storage) {
-            println!(
-                "stack before {:#?}",
-                self.stack
-                    .iter()
-                    .map(|n| n.load(self.storage).unwrap())
-                    .collect::<Vec<_>>()
-            );
             if !self.current.is_empty(self.storage) {
                 self.stack.push(self.current.clone());
-                println!(
-                    "stack inbetween {:#?}",
-                    self.stack
-                        .iter()
-                        .map(|n| n.load(self.storage).unwrap())
-                        .collect::<Vec<_>>()
-                );
                 self.current = self.current.left();
             } else {
                 // unwrap because stack cannot be empty here
                 self.current = self.stack.pop().unwrap();
-                println!(
-                    "stack after {:#?}",
-                    self.stack
-                        .iter()
-                        .map(|n| n.load(self.storage).unwrap())
-                        .collect::<Vec<_>>()
-                );
                 item = match self.current.load(self.storage) {
                     Ok(i) => Some(i),
                     Err(_) => None,
