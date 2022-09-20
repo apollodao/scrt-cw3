@@ -124,10 +124,6 @@ pub fn execute_propose(
         weight: vote_power,
         vote: Vote::Yes,
     };
-    let (_, exists) = VOTER_ADDRESSES.find(deps.storage, &info.sender)?;
-    if !exists {
-        VOTER_ADDRESSES.insert(deps.storage, &info.sender)?;
-    }
     BALLOTS
         .add_suffix(&id.to_ne_bytes())
         .insert(deps.storage, &info.sender, &ballot)?;
