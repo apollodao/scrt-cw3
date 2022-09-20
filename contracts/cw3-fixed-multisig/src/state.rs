@@ -4,16 +4,14 @@ use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use cosmwasm_std::{
-    Addr, Binary, BlockInfo, CosmosMsg, Decimal, Empty, OverflowError, OverflowOperation, StdError,
-    StdResult, Storage, Uint128,
+    Addr, BlockInfo, CosmosMsg, Decimal, Empty, StdError, StdResult, Storage, Uint128,
 };
 
 use cw3::{Status, Vote};
-//use cw_storage_plus::{Item, Map};
 use cw_utils::{Duration, Expiration, Threshold};
 use secret_toolkit::{
     serialization::{Bincode2, Serde},
-    storage::{AppendStore, Item, Keymap as Map},
+    storage::{Item, Keymap as Map},
 };
 
 // we multiply by this when calculating needed_votes in order to round up properly
@@ -189,17 +187,17 @@ type ProposalID = u64;
 type VoterWeight = u64;
 
 // unique items
-pub const CONFIG: Item<Config> = Item::new(b"config");
-pub const PROPOSAL_COUNT: Item<u64> = Item::new(b"proposal_count");
+pub static CONFIG: Item<Config> = Item::new(b"config");
+pub static PROPOSAL_COUNT: Item<u64> = Item::new(b"proposal_count");
 
 // binary search tree (heap)
 pub static VOTER_ADDRESSES: BinarySearchTree<Addr> = BinarySearchTree::new(b"voter_addresses");
 
 // maps
-pub const PROPOSALS: Map<ProposalID, Proposal> = Map::new(b"proposals");
-pub const VOTERS: Map<Addr, VoterWeight> = Map::new(b"voters");
+pub static PROPOSALS: Map<ProposalID, Proposal> = Map::new(b"proposals");
+pub static VOTERS: Map<Addr, VoterWeight> = Map::new(b"voters");
 // suffixed map
-pub const BALLOTS: Map<Addr, Ballot> = Map::new(b"votes");
+pub static BALLOTS: Map<Addr, Ballot> = Map::new(b"votes");
 
 pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     let id: u64 = PROPOSAL_COUNT.may_load(store)?.unwrap_or_default() + 1;
@@ -207,10 +205,9 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     Ok(id)
 }
 
-#[derive(Debug)]
 pub struct BinarySearchTree<'a, T, Ser = Bincode2>
 where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd + std::fmt::Debug,
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
 {
     key: &'a [u8],
@@ -221,7 +218,7 @@ where
 
 pub struct BinarySearchTreeIterator<'a, T, Ser = Bincode2>
 where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd + std::fmt::Debug,
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
 {
     current: BinarySearchTree<'a, T, Ser>,
@@ -231,8 +228,8 @@ where
 
 impl<'a, T, Ser> BinarySearchTree<'a, T, Ser>
 where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd + std::fmt::Debug,
-    Ser: Serde + std::fmt::Debug,
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
+    Ser: Serde,
 {
     pub const fn new(name: &'a [u8]) -> Self {
         Self {
@@ -402,7 +399,7 @@ where
 
 impl<'a, T, Ser> BinarySearchTreeIterator<'a, T, Ser>
 where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd + std::fmt::Debug,
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
 {
     pub fn new(root: BinarySearchTree<'a, T, Ser>, storage: &'a dyn Storage) -> Self {
@@ -417,8 +414,8 @@ where
 
 impl<'a, T, Ser> Iterator for BinarySearchTreeIterator<'a, T, Ser>
 where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd + std::fmt::Debug,
-    Ser: Serde + std::fmt::Debug,
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
+    Ser: Serde,
 {
     type Item = T;
 

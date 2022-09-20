@@ -12,7 +12,6 @@ use cw3::{
     ProposalListResponse, ProposalResponse, Status, Vote, VoteInfo, VoteListResponse, VoteResponse,
     VoterDetail, VoterListResponse, VoterResponse,
 };
-use cw_storage_plus::CwIntKey;
 use cw_utils::{Expiration, ThresholdResponse};
 
 use crate::error::ContractError;
