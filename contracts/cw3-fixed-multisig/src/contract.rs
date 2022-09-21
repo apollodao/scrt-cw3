@@ -299,7 +299,10 @@ fn list_proposals(
     limit: Option<u32>,
 ) -> StdResult<ProposalListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = starting_point.unwrap_or(0) as usize;
+    let start = match starting_point {
+        Some(u) => u + 1,
+        None => 0,
+    } as usize;
 
     let page_keys: Vec<u64> = {
         if reverse {
@@ -329,32 +332,6 @@ fn list_proposals(
     Ok(ProposalListResponse { proposals: page })
 }
 
-fn map_proposal(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
-    let (id, prop) = item;
-    let status = prop.current_status(block);
-    let threshold = prop.threshold.to_response(prop.total_weight);
-    ProposalResponse {
-        id,
-        title: prop.title,
-        description: prop.description,
-        msgs: prop.msgs,
-        status,
-        expires: prop.expires,
-        threshold,
-    }
-}
-
-// @todo do this with macros
-fn get_proposal(store: &dyn Storage, id: &u64) -> Result<Proposal, ContractError> {
-    PROPOSALS.get(store, id).ok_or(ContractError::NotFound {})
-}
-
-fn get_proposal_std(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
-    PROPOSALS.get(store, id).ok_or(StdError::NotFound {
-        kind: "Proposal".to_string(),
-    })
-}
-
 fn query_vote(deps: Deps, proposal_id: u64, voter: String) -> StdResult<VoteResponse> {
     let voter = deps.api.addr_validate(&voter)?;
     let ballot = BALLOTS
@@ -381,8 +358,8 @@ fn list_votes(
     let suffix = proposal_id.to_ne_bytes();
     let ballots = BALLOTS.add_suffix(&suffix);
     let addresses = match start_address {
-        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?,
-        None => VOTER_ADDRESSES.iter(deps.storage),
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?.skip(1),
+        None => VOTER_ADDRESSES.iter(deps.storage).skip(0),
     }
     .take(limit);
 
@@ -436,6 +413,34 @@ fn list_voters(
     }
 
     Ok(VoterListResponse { voters })
+}
+
+/// Utils
+
+fn map_proposal(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
+    let (id, prop) = item;
+    let status = prop.current_status(block);
+    let threshold = prop.threshold.to_response(prop.total_weight);
+    ProposalResponse {
+        id,
+        title: prop.title,
+        description: prop.description,
+        msgs: prop.msgs,
+        status,
+        expires: prop.expires,
+        threshold,
+    }
+}
+
+// @todo do this with macros
+fn get_proposal(store: &dyn Storage, id: &u64) -> Result<Proposal, ContractError> {
+    PROPOSALS.get(store, id).ok_or(ContractError::NotFound {})
+}
+
+fn get_proposal_std(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
+    PROPOSALS.get(store, id).ok_or(StdError::NotFound {
+        kind: "Proposal".to_string(),
+    })
 }
 
 #[cfg(test)]
