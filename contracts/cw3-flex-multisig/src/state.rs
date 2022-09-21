@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, QuerierWrapper};
 use cw4::Cw4Contract;
-use cw_storage_plus::Item;
 use cw_utils::{Duration, Threshold};
+use secret_toolkit::storage::Item;
 
 use crate::error::ContractError;
 
@@ -53,4 +53,4 @@ impl Config {
 }
 
 // unique items
-pub const CONFIG: Item<Config> = Item::new("config");
+pub const CONFIG: Item<Config> = Item::new(b"config");

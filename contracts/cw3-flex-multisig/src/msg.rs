@@ -14,6 +14,8 @@ pub struct InstantiateMsg {
     pub group_addr: String,
     pub threshold: Threshold,
     pub max_voting_period: Duration,
+    // Hash for the wrapped CW4 contract
+    pub cw4_code_hash: String,
     // who is able to execute passed proposals
     // None means that anyone can execute
     pub executor: Option<Executor>,
