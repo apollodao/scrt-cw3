@@ -1,12 +1,14 @@
 [workspace]
 members = [
   "contracts/cw3-fixed-multisig",
+  "contracts/cw3-flex-multisig",
   "contracts/cw20-base",
   "packages/controllers",
   "packages/cw2",
   "packages/cw3",
-  # "packages/cw4",
+  "packages/cw4",
   "packages/cw20",
+  "packages/multi-test",
   "packages/storage-plus",
   "packages/utils"]
 
