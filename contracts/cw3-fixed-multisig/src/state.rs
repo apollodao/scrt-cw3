@@ -10,7 +10,7 @@ use cosmwasm_std::{
 use cw3::{Status, Vote};
 use cw_utils::{Duration, Expiration, Threshold};
 use secret_toolkit::{
-    serialization::{Bincode2, Serde},
+    serialization::{Json, Serde},
     storage::{Item, Keymap as Map},
 };
 
@@ -187,17 +187,17 @@ type ProposalID = u64;
 type VoterWeight = u64;
 
 // unique items
-pub static CONFIG: Item<Config> = Item::new(b"config");
-pub static PROPOSAL_COUNT: Item<u64> = Item::new(b"proposal_count");
+pub static CONFIG: Item<Config, Json> = Item::new(b"config");
+pub static PROPOSAL_COUNT: Item<u64, Json> = Item::new(b"proposal_count");
 
 // binary search tree (heap)
 pub static VOTER_ADDRESSES: BinarySearchTree<Addr> = BinarySearchTree::new(b"voter_addresses");
 
 // maps
-pub static PROPOSALS: Map<ProposalID, Proposal> = Map::new(b"proposals");
-pub static VOTERS: Map<Addr, VoterWeight> = Map::new(b"voters");
+pub static PROPOSALS: Map<ProposalID, Proposal, Json> = Map::new(b"proposals");
+pub static VOTERS: Map<Addr, VoterWeight, Json> = Map::new(b"voters");
 // suffixed map
-pub static BALLOTS: Map<Addr, Ballot> = Map::new(b"votes");
+pub static BALLOTS: Map<Addr, Ballot, Json> = Map::new(b"votes");
 
 pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     let id: u64 = PROPOSAL_COUNT.may_load(store)?.unwrap_or_default() + 1;
@@ -205,7 +205,7 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     Ok(id)
 }
 
-pub struct BinarySearchTree<'a, T, Ser = Bincode2>
+pub struct BinarySearchTree<'a, T, Ser = Json>
 where
     T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
@@ -216,7 +216,7 @@ where
     serialization_type: PhantomData<Ser>,
 }
 
-pub struct BinarySearchTreeIterator<'a, T, Ser = Bincode2>
+pub struct BinarySearchTreeIterator<'a, T, Ser = Json>
 where
     T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
