@@ -3,6 +3,7 @@ use std::{any::type_name, marker::PhantomData};
 use serde::{de::DeserializeOwned, Serialize};
 
 use cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_storage::to_length_prefixed;
 use secret_toolkit::serialization::{Json, Serde};
 
 pub struct BinarySearchTree<'a, T, Ser = Json>
@@ -37,6 +38,18 @@ where
             prefix: None,
             item_type: PhantomData,
             serialization_type: PhantomData,
+        }
+    }
+
+    pub fn add_suffix(&self, suffix: &[u8]) -> Self {
+        let suffix = to_length_prefixed(suffix);
+        let prefix = self.prefix.as_deref().unwrap_or(self.storage_key);
+        let prefix = [prefix, suffix.as_slice()].concat();
+        Self {
+            key: self.key,
+            prefix: Some(prefix),
+            item_type: self.item_type,
+            serialization_type: self.serialization_type,
         }
     }
 

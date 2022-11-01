@@ -9,13 +9,19 @@ use crate::{Item, Map, Strategy};
 /// Item that maintains a snapshot of one or more checkpoints.
 /// We can query historical data as well as current state.
 /// What data is snapshotted depends on the Strategy.
-pub struct SnapshotItem<'a, T> {
+pub struct SnapshotItem<'a, T>
+where
+    T: Serialize + DeserializeOwned,
+{
     primary: Item<'a, T>,
     changelog_namespace: &'a str,
-    snapshots: Snapshot<'a, (), T>,
+    snapshots: Snapshot<'a, T>,
 }
 
-impl<'a, T> SnapshotItem<'a, T> {
+impl<'a, T> SnapshotItem<'a, T>
+where
+    T: Serialize + DeserializeOwned,
+{
     /// Example:
     ///
     /// ```rust
@@ -31,12 +37,13 @@ impl<'a, T> SnapshotItem<'a, T> {
         storage_key: &'a str,
         checkpoints: &'a str,
         changelog: &'a str,
+        height_index: &'a str,
         strategy: Strategy,
     ) -> Self {
         SnapshotItem {
             primary: Item::new(storage_key),
             changelog_namespace: changelog,
-            snapshots: Snapshot::new(checkpoints, changelog, strategy),
+            snapshots: Snapshot::new(checkpoints, changelog, height_index, strategy),
         }
     }
 
@@ -61,23 +68,23 @@ where
     /// load old value and store changelog
     fn write_change(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
         // if there is already data in the changelog for this block, do not write more
-        if self.snapshots.has_changelog(store, (), height)? {
+        if self.snapshots.has_changelog(store, &[], height)? {
             return Ok(());
         }
         // otherwise, store the previous value
         let old = self.primary.may_load(store)?;
-        self.snapshots.write_changelog(store, (), height, old)
+        self.snapshots.write_changelog(store, &[], height, old)
     }
 
     pub fn save(&self, store: &mut dyn Storage, data: &T, height: u64) -> StdResult<()> {
-        if self.snapshots.should_checkpoint(store, &())? {
+        if self.snapshots.should_checkpoint(store, &[])? {
             self.write_change(store, height)?;
         }
         self.primary.save(store, data)
     }
 
     pub fn remove(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
-        if self.snapshots.should_checkpoint(store, &())? {
+        if self.snapshots.should_checkpoint(store, &[])? {
             self.write_change(store, height)?;
         }
         self.primary.remove(store);
@@ -96,7 +103,7 @@ where
     }
 
     pub fn may_load_at_height(&self, store: &dyn Storage, height: u64) -> StdResult<Option<T>> {
-        let snapshot = self.snapshots.may_load_at_height(store, (), height)?;
+        let snapshot = self.snapshots.may_load_at_height(store, &[], height)?;
 
         if let Some(r) = snapshot {
             Ok(r)
@@ -132,23 +139,29 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bound::Bound;
     use cosmwasm_std::testing::MockStorage;
 
     type TestItem = SnapshotItem<'static, u64>;
 
-    const NEVER: TestItem =
-        SnapshotItem::new("never", "never__check", "never__change", Strategy::Never);
+    const NEVER: TestItem = SnapshotItem::new(
+        "never",
+        "never__check",
+        "never__change",
+        "never__index",
+        Strategy::Never,
+    );
     const EVERY: TestItem = SnapshotItem::new(
         "every",
         "every__check",
         "every__change",
+        "every__index",
         Strategy::EveryBlock,
     );
     const SELECT: TestItem = SnapshotItem::new(
         "select",
         "select__check",
         "select__change",
+        "select__index",
         Strategy::Selected,
     );
 
