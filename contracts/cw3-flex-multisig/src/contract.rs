@@ -449,7 +449,6 @@ fn list_voters(
     let cfg = CONFIG.load(deps.storage)?;
     let voters = cfg
         .group_addr
-        // @todo reimplement this in cw4 to be Secret-compatible
         .list_members(&deps.querier, start_after, limit)?
         .into_iter()
         .map(|member| VoterDetail {
@@ -460,7 +459,6 @@ fn list_voters(
     Ok(VoterListResponse { voters })
 }
 
-// @todo do this with macros
 fn get_proposal(store: &dyn Storage, id: &u64) -> Result<Proposal, ContractError> {
     PROPOSALS.get(store, id).ok_or(ContractError::NotFound {})
 }
