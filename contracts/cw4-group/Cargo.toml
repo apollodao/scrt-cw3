@@ -33,6 +33,7 @@ cw-controllers = { path = "../../packages/controllers", version = "0.13.4" }
 cw-storage-plus = { path = "../../packages/storage-plus", version = "0.13.4" }
 cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
 schemars = "0.8.1"
+secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", branch = "cosmwasm-v1.0", default-features = false, features = ["utils", "storage", "serialization"]}
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
 

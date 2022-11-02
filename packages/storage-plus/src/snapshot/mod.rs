@@ -2,7 +2,7 @@
 mod item;
 mod map;
 
-pub use item::SnapshotItem;
+//pub use item::SnapshotItem;
 pub use map::SnapshotMap;
 
 use cosmwasm_std::{StdError, StdResult, Storage};
@@ -26,8 +26,8 @@ where
 
     // this stores all changes (key, height). Must differentiate between no data written,
     // and explicit None (just inserted)
-    pub changelog: Map<'a, u64, ChangeSet<T>, Json>,
-    pub height_index: BinarySearchTree<'a, u64, Json>,
+    changelog: Map<'a, u64, ChangeSet<T>, Json>,
+    height_index: BinarySearchTree<'a, u64, Json>,
 
     // How aggressive we are about checkpointing all data
     strategy: Strategy,
@@ -38,15 +38,15 @@ where
     T: Serialize + DeserializeOwned,
 {
     pub const fn new(
-        checkpoints: &'a str,
-        changelog: &'a str,
-        height_index: &'a str,
+        checkpoints: &'a [u8],
+        changelog: &'a [u8],
+        height_index: &'a [u8],
         strategy: Strategy,
     ) -> Snapshot<'a, T> {
         Snapshot {
-            checkpoints: Map::new(checkpoints.to_owned().as_bytes()),
-            changelog: Map::new(changelog.to_owned().as_bytes()),
-            height_index: BinarySearchTree::new(height_index.to_owned().as_bytes()),
+            checkpoints: Map::new(checkpoints),
+            changelog: Map::new(changelog),
+            height_index: BinarySearchTree::new(height_index),
             strategy,
         }
     }
@@ -64,7 +64,7 @@ where
         // NOTE: remove_checkpoint is never called in the cw4-group contract
         // so this is just for show
         match self.checkpoints.get(store, &height).unwrap_or_default() {
-            count => self.checkpoints.insert(store, &height, &(count - 1)),
+            count if count > 0 => self.checkpoints.insert(store, &height, &(count - 1)),
             0 => Ok(()),
             _ => unreachable!("Should never happen"),
         }
@@ -85,7 +85,7 @@ where
     }
 
     /// this is just pulled out from above for the selected block
-    fn should_checkpoint_selected(&self, store: &dyn Storage, k: &[u8]) -> StdResult<bool> {
+    fn should_checkpoint_selected(&self, _store: &dyn Storage, _k: &[u8]) -> StdResult<bool> {
         // This is never called in either of the cw4 contracts due to the EveryBlock strategy being
         // chosen, so we'll just ignore this for now
         unimplemented!()
@@ -134,11 +134,7 @@ where
         key: &[u8],
         height: u64,
     ) -> StdResult<bool> {
-        //Ok(self.changelog.add_suffix(key).contains(store, &height))
-        self.height_index
-            .add_suffix(key)
-            .find(store, &height)
-            .map(|(v, b)| b)
+        Ok(self.changelog.add_suffix(key).contains(store, &height))
     }
 
     pub fn write_changelog(

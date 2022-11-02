@@ -43,7 +43,7 @@ where
 
     pub fn add_suffix(&self, suffix: &[u8]) -> Self {
         let suffix = to_length_prefixed(suffix);
-        let prefix = self.prefix.as_deref().unwrap_or(self.storage_key);
+        let prefix = self.prefix.as_deref().unwrap_or(self.key);
         let prefix = [prefix, suffix.as_slice()].concat();
         Self {
             key: self.key,

@@ -30,15 +30,24 @@ impl Cw4GroupContract {
     fn encode_msg(&self, msg: ExecuteMsg) -> StdResult<CosmosMsg> {
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
-            code_hash: self.code_hash,
+            code_hash: self.code_hash.clone(),
             msg: to_binary(&msg)?,
             funds: vec![],
         }
         .into())
     }
 
-    pub fn update_members(&self, remove: Vec<String>, add: Vec<Member>) -> StdResult<CosmosMsg> {
-        let msg = ExecuteMsg::UpdateMembers { remove, add };
+    pub fn update_members(
+        &self,
+        remove: Vec<String>,
+        add: Vec<Member>,
+        code_hash: Option<String>,
+    ) -> StdResult<CosmosMsg> {
+        let msg = ExecuteMsg::UpdateMembers {
+            remove,
+            add,
+            code_hash,
+        };
         self.encode_msg(msg)
     }
 }

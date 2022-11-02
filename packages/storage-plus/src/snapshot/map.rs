@@ -3,25 +3,32 @@ use serde::Serialize;
 
 use cosmwasm_std::{StdError, StdResult, Storage};
 
-use crate::bound::PrefixBound;
-use crate::de::KeyDeserialize;
-use crate::iter_helpers::deserialize_kv;
-use crate::keys::PrimaryKey;
-use crate::map::Map;
-use crate::path::Path;
-use crate::prefix::{namespaced_prefix_range, Prefix};
 use crate::snapshot::{ChangeSet, Snapshot};
-use crate::{Bound, Prefixer, Strategy};
+use crate::{BinarySearchTree, BinarySearchTreeIterator, Strategy};
+
+use secret_toolkit::serialization::{Json, Serde};
+use secret_toolkit::storage::Keymap as Map;
 
 /// Map that maintains a snapshots of one or more checkpoints.
 /// We can query historical data as well as current state.
 /// What data is snapshotted depends on the Strategy.
-pub struct SnapshotMap<'a, K, T> {
-    primary: Map<'a, K, T>,
-    snapshots: Snapshot<'a, K, T>,
+pub struct SnapshotMap<'a, K, T, S = Json>
+where
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
+    S: Serde,
+{
+    primary: Map<'a, K, T, S>,
+    snapshots: Snapshot<'a, T>,
+    key_index: BinarySearchTree<'a, K, S>,
 }
 
-impl<'a, K, T> SnapshotMap<'a, K, T> {
+impl<'a, K, T, S> SnapshotMap<'a, K, T, S>
+where
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
+    S: Serde,
+{
     /// Example:
     ///
     /// ```rust
@@ -35,26 +42,37 @@ impl<'a, K, T> SnapshotMap<'a, K, T> {
     /// );
     /// ```
     pub const fn new(
-        pk: &'a str,
-        checkpoints: &'a str,
-        changelog: &'a str,
+        pk: &'a [u8],
+        key_index: &'a [u8],
+        checkpoints: &'a [u8],
+        changelog: &'a [u8],
+        height_index: &'a [u8],
         strategy: Strategy,
     ) -> Self {
-        SnapshotMap {
+        Self {
             primary: Map::new(pk),
-            snapshots: Snapshot::new(checkpoints, changelog, strategy),
+            snapshots: Snapshot::new(checkpoints, changelog, height_index, strategy),
+            key_index: BinarySearchTree::new(key_index),
         }
     }
 
-    pub fn changelog(&self) -> &Map<'a, (K, u64), ChangeSet<T>> {
+    pub fn changelog(&self) -> &Map<'a, u64, ChangeSet<T>, Json> {
         &self.snapshots.changelog
+    }
+
+    fn serialize_key(&self, key: &K) -> StdResult<Vec<u8>> {
+        S::serialize(key)
+    }
+
+    fn deserialize_key(&self, key_data: &[u8]) -> StdResult<K> {
+        S::deserialize(key_data)
     }
 }
 
 impl<'a, K, T> SnapshotMap<'a, K, T>
 where
-    T: Serialize + DeserializeOwned + Clone,
-    K: PrimaryKey<'a> + Prefixer<'a>,
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
 {
     pub fn add_checkpoint(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
         self.snapshots.add_checkpoint(store, height)
@@ -67,52 +85,64 @@ where
 
 impl<'a, K, T> SnapshotMap<'a, K, T>
 where
-    T: Serialize + DeserializeOwned + Clone,
-    K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
+    K: Serialize + DeserializeOwned + PartialOrd + Clone,
+    T: Serialize + DeserializeOwned,
 {
-    pub fn key(&self, k: K) -> Path<T> {
-        self.primary.key(k)
-    }
-
-    fn no_prefix_raw(&self) -> Prefix<Vec<u8>, T, K> {
-        self.primary.no_prefix_raw()
-    }
-
     /// load old value and store changelog
     fn write_change(&self, store: &mut dyn Storage, k: K, height: u64) -> StdResult<()> {
         // if there is already data in the changelog for this key and block, do not write more
-        if self.snapshots.has_changelog(store, k.clone(), height)? {
+        // @todo we need to serialize the key like in KeyMap
+        if self
+            .snapshots
+            .has_changelog(store, &self.serialize_key(&k)?, height)?
+        {
             return Ok(());
         }
         // otherwise, store the previous value
-        let old = self.primary.may_load(store, k.clone())?;
-        self.snapshots.write_changelog(store, k, height, old)
+        let old = self.may_load(store, k.clone())?;
+        self.snapshots
+            .write_changelog(store, &self.serialize_key(&k)?, height, old)
     }
 
     pub fn save(&self, store: &mut dyn Storage, k: K, data: &T, height: u64) -> StdResult<()> {
-        if self.snapshots.should_checkpoint(store, &k)? {
+        if self
+            .snapshots
+            .should_checkpoint(store, &self.serialize_key(&k)?)?
+        {
             self.write_change(store, k.clone(), height)?;
         }
-        self.primary.save(store, k, data)
+        self.primary.insert(store, &k, &data)?;
+        match self.key_index.insert(store, &k) {
+            Err(StdError::GenericErr { .. }) => Ok(()), // just means element already exists
+            Err(e) => Err(e),                           // real error
+            _ => Ok(()),
+        }
     }
 
     pub fn remove(&self, store: &mut dyn Storage, k: K, height: u64) -> StdResult<()> {
-        if self.snapshots.should_checkpoint(store, &k)? {
+        if self
+            .snapshots
+            .should_checkpoint(store, &self.serialize_key(&k)?)?
+        {
             self.write_change(store, k.clone(), height)?;
         }
-        self.primary.remove(store, k);
-        Ok(())
+        self.primary.remove(store, &k)
+        // Here we would like to remove the corresponding entry in our key index BST, but that
+        // operation doesn't exist so we will just leave it. In extreme cases it will slow down
+        // iteration, but in practice it's probably negligible.
     }
 
     /// load will return an error if no data is set at the given key, or on parse error
     pub fn load(&self, store: &dyn Storage, k: K) -> StdResult<T> {
-        self.primary.load(store, k)
+        self.primary
+            .get(store, &k)
+            .ok_or(StdError::not_found("key"))
     }
 
     /// may_load will parse the data stored at the key if present, returns Ok(None) if no data there.
     /// returns an error on issues parsing
     pub fn may_load(&self, store: &dyn Storage, k: K) -> StdResult<Option<T>> {
-        self.primary.may_load(store, k)
+        Ok(self.primary.get(store, &k))
     }
 
     pub fn may_load_at_height(
@@ -121,9 +151,9 @@ where
         k: K,
         height: u64,
     ) -> StdResult<Option<T>> {
-        let snapshot = self
-            .snapshots
-            .may_load_at_height(store, k.clone(), height)?;
+        let snapshot =
+            self.snapshots
+                .may_load_at_height(store, &self.serialize_key(&k)?, height)?;
 
         if let Some(r) = snapshot {
             Ok(r)
@@ -159,114 +189,92 @@ where
         self.save(store, k, &output, height)?;
         Ok(output)
     }
+
+    // @todo add iter() function
+    //pub fn iter(&self) -> StdResult<>
 }
 
-// short-cut for simple keys, rather than .prefix(()).range_raw(...)
-impl<'a, K, T> SnapshotMap<'a, K, T>
+impl<'a, K, T, S> SnapshotMap<'a, K, T, S>
 where
-    T: Serialize + DeserializeOwned + Clone,
-    K: PrimaryKey<'a> + Prefixer<'a> + KeyDeserialize,
-{
-    // I would prefer not to copy code from Prefix, but no other way
-    // with lifetimes (create Prefix inside function and return ref = no no)
-    pub fn range_raw<'c>(
-        &self,
-        store: &'c dyn Storage,
-        min: Option<Bound<'a, K>>,
-        max: Option<Bound<'a, K>>,
-        order: cosmwasm_std::Order,
-    ) -> Box<dyn Iterator<Item = StdResult<cosmwasm_std::Record<T>>> + 'c>
-    where
-        T: 'c,
-    {
-        self.no_prefix_raw().range_raw(store, min, max, order)
-    }
-
-    pub fn keys_raw<'c>(
-        &self,
-        store: &'c dyn Storage,
-        min: Option<Bound<'a, K>>,
-        max: Option<Bound<'a, K>>,
-        order: cosmwasm_std::Order,
-    ) -> Box<dyn Iterator<Item = Vec<u8>> + 'c>
-    where
-        T: 'c,
-    {
-        self.no_prefix_raw().keys_raw(store, min, max, order)
-    }
-}
-
-#[cfg(feature = "iterator")]
-impl<'a, K, T> SnapshotMap<'a, K, T>
-where
+    K: Serialize + DeserializeOwned + PartialOrd,
     T: Serialize + DeserializeOwned,
-    K: PrimaryKey<'a> + KeyDeserialize,
+    S: Serde,
 {
-    /// While `range` over a `prefix` fixes the prefix to one element and iterates over the
-    /// remaining, `prefix_range` accepts bounds for the lowest and highest elements of the
-    /// `Prefix` itself, and iterates over those (inclusively or exclusively, depending on
-    /// `PrefixBound`).
-    /// There are some issues that distinguish these two, and blindly casting to `Vec<u8>` doesn't
-    /// solve them.
-    pub fn prefix_range<'c>(
+    pub fn iter(&self, store: &'a dyn Storage) -> SnapshotMapIterator<'a, K, T, S> {
+        // disgusting hacky workaround to copy/clone KeyMap
+        let map = self.primary.add_suffix(&[]);
+        SnapshotMapIterator::new(store, map, self.key_index.iter(store))
+    }
+
+    pub fn iter_from(
         &self,
-        store: &'c dyn Storage,
-        min: Option<PrefixBound<'a, K::Prefix>>,
-        max: Option<PrefixBound<'a, K::Prefix>>,
-        order: cosmwasm_std::Order,
-    ) -> Box<dyn Iterator<Item = StdResult<(K::Output, T)>> + 'c>
-    where
-        T: 'c,
-        'a: 'c,
-        K: 'c,
-        K::Output: 'static,
-    {
-        let mapped = namespaced_prefix_range(store, self.primary.namespace(), min, max, order)
-            .map(deserialize_kv::<K, T>);
-        Box::new(mapped)
-    }
-
-    pub fn range<'c>(
-        &self,
-        store: &'c dyn Storage,
-        min: Option<Bound<'a, K>>,
-        max: Option<Bound<'a, K>>,
-        order: cosmwasm_std::Order,
-    ) -> Box<dyn Iterator<Item = StdResult<(K::Output, T)>> + 'c>
-    where
-        T: 'c,
-        K::Output: 'static,
-    {
-        self.no_prefix().range(store, min, max, order)
-    }
-
-    pub fn keys<'c>(
-        &self,
-        store: &'c dyn Storage,
-        min: Option<Bound<'a, K>>,
-        max: Option<Bound<'a, K>>,
-        order: cosmwasm_std::Order,
-    ) -> Box<dyn Iterator<Item = StdResult<K::Output>> + 'c>
-    where
-        T: 'c,
-        K::Output: 'static,
-    {
-        self.no_prefix().keys(store, min, max, order)
-    }
-
-    pub fn prefix(&self, p: K::Prefix) -> Prefix<K::Suffix, T, K::Suffix> {
-        Prefix::new(self.primary.namespace(), &p.prefix())
-    }
-
-    pub fn sub_prefix(&self, p: K::SubPrefix) -> Prefix<K::SuperSuffix, T, K::SuperSuffix> {
-        Prefix::new(self.primary.namespace(), &p.prefix())
-    }
-
-    fn no_prefix(&self) -> Prefix<K, T, K> {
-        Prefix::new(self.primary.namespace(), &[])
+        store: &'a dyn Storage,
+        key: K,
+    ) -> StdResult<SnapshotMapIterator<'a, K, T, S>> {
+        // disgusting hacky workaround to copy/clone KeyMap
+        let map = self.primary.add_suffix(&[]);
+        Ok(SnapshotMapIterator::new(
+            store,
+            map,
+            self.key_index.iter_from(store, &key)?,
+        ))
     }
 }
 
+pub struct SnapshotMapIterator<'a, K, T, S>
+where
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
+    S: Serde,
+{
+    store: &'a dyn Storage,
+    map: Map<'a, K, T, S>,
+    index_iter: BinarySearchTreeIterator<'a, K, S>,
+}
+
+impl<'a, K, T, S> SnapshotMapIterator<'a, K, T, S>
+where
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
+    S: Serde,
+{
+    pub const fn new(
+        store: &'a dyn Storage,
+        map: Map<'a, K, T, S>,
+        index_iter: BinarySearchTreeIterator<'a, K, S>,
+    ) -> Self {
+        Self {
+            store,
+            map,
+            index_iter,
+        }
+    }
+}
+
+impl<'a, K, T, S> Iterator for SnapshotMapIterator<'a, K, T, S>
+where
+    K: Serialize + DeserializeOwned + PartialOrd,
+    T: Serialize + DeserializeOwned,
+    S: Serde,
+{
+    type Item = (K, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Because we don't remove keys from the index when they are removed from the primary map,
+        // we need to keep iterating until we get a hit if the key is missing from the primary
+        let mut item = None;
+        while item.is_none() {
+            if let Some(k) = self.index_iter.next() {
+                item = self.map.get(self.store, &k).map(|t| (k, t));
+            } else {
+                return None;
+            }
+        }
+        item
+    }
+}
+
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -642,3 +650,4 @@ mod tests {
         );
     }
 }
+*/

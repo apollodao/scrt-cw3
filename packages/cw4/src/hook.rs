@@ -51,13 +51,14 @@ impl MemberChangedHookMsg {
     /// creates a cosmos_msg sending this struct to the named contract
     pub fn into_cosmos_msg<T: Into<String>>(
         self,
-        receiver_hash: String,
         contract_addr: T,
+        receiver_hash: Option<String>,
     ) -> StdResult<CosmosMsg> {
         let msg = self.into_binary()?;
         let execute = WasmMsg::Execute {
             contract_addr: contract_addr.into(),
-            code_hash: receiver_hash,
+            // The hash should be supplied if possible, but not required
+            code_hash: receiver_hash.unwrap_or_default(),
             msg,
             funds: vec![],
         };

@@ -2,6 +2,8 @@
 members = [
   "contracts/cw3-fixed-multisig",
   "contracts/cw3-flex-multisig",
+  "contracts/cw4-group",
+  "contracts/cw4-stake",
   "contracts/cw20-base",
   "packages/controllers",
   "packages/cw2",

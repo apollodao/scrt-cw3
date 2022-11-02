@@ -58,14 +58,16 @@ pub struct HooksResponse {
 
 /// TOTAL_KEY is meant for raw queries
 pub const TOTAL_KEY: &str = "total";
-pub const MEMBERS_KEY: &str = "members";
-pub const MEMBERS_CHECKPOINTS: &str = "members__checkpoints";
-pub const MEMBERS_CHANGELOG: &str = "members__changelog";
+pub const MEMBERS_KEY: &[u8] = b"members";
+pub const MEMBERS_INDEX: &[u8] = b"members__index";
+pub const MEMBERS_CHECKPOINTS: &[u8] = b"members__checkpoints";
+pub const MEMBERS_CHANGELOG: &[u8] = b"members__changelog";
+pub const MEMBERS_HEIGHT_INDEX: &[u8] = b"members__height_index";
 
 /// member_key is meant for raw queries for one member, given address
 pub fn member_key(address: &str) -> Vec<u8> {
     // FIXME: Inlined here to avoid storage-plus import
-    let mut key = [b"\x00", &[MEMBERS_KEY.len() as u8], MEMBERS_KEY.as_bytes()].concat();
+    let mut key = [b"\x00", &[MEMBERS_KEY.len() as u8], MEMBERS_KEY].concat();
     key.extend_from_slice(address.as_bytes());
     key
 }

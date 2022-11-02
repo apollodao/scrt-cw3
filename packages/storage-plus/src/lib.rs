@@ -40,5 +40,4 @@ pub use map::Map;
 pub use path::Path;
 #[cfg(feature = "iterator")]
 pub use prefix::{range_with_prefix, Prefix};
-#[cfg(feature = "iterator")]
-pub use snapshot::{SnapshotItem, SnapshotMap, Strategy};
+pub use snapshot::{SnapshotMap, Strategy};

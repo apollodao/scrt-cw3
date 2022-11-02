@@ -1,15 +1,13 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
-    SubMsg,
+    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
 };
 use cw2::set_contract_version;
 use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
-use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
 use crate::error::ContractError;
@@ -51,7 +49,7 @@ pub fn create(
     for member in members.into_iter() {
         total += member.weight;
         let member_addr = deps.api.addr_validate(&member.addr)?;
-        MEMBERS.save(deps.storage, &member_addr, &member.weight, height)?;
+        MEMBERS.save(deps.storage, member_addr, &member.weight, height)?;
     }
     TOTAL.save(deps.storage, &total)?;
 
@@ -73,9 +71,11 @@ pub fn execute(
             info,
             admin.map(|admin| api.addr_validate(&admin)).transpose()?,
         )?),
-        ExecuteMsg::UpdateMembers { add, remove } => {
-            execute_update_members(deps, env, info, add, remove)
-        }
+        ExecuteMsg::UpdateMembers {
+            add,
+            remove,
+            code_hash,
+        } => execute_update_members(deps, env, info, add, remove, code_hash),
         ExecuteMsg::AddHook { addr } => {
             Ok(HOOKS.execute_add_hook(&ADMIN, deps, info, api.addr_validate(&addr)?)?)
         }
@@ -91,6 +91,7 @@ pub fn execute_update_members(
     info: MessageInfo,
     add: Vec<Member>,
     remove: Vec<String>,
+    code_hash: Option<String>,
 ) -> Result<Response, ContractError> {
     let attributes = vec![
         attr("action", "update_members"),
@@ -103,7 +104,9 @@ pub fn execute_update_members(
     let diff = update_members(deps.branch(), env.block.height, info.sender, add, remove)?;
     // call all registered hooks
     let messages = HOOKS.prepare_hooks(deps.storage, |h| {
-        diff.clone().into_cosmos_msg(h).map(SubMsg::new)
+        diff.clone()
+            .into_cosmos_msg(h, code_hash.clone())
+            .map(SubMsg::new)
     })?;
     Ok(Response::new()
         .add_submessages(messages)
@@ -126,7 +129,7 @@ pub fn update_members(
     // add all new members and update total
     for add in to_add.into_iter() {
         let add_addr = deps.api.addr_validate(&add.addr)?;
-        MEMBERS.update(deps.storage, &add_addr, height, |old| -> StdResult<_> {
+        MEMBERS.update(deps.storage, add_addr, height, |old| -> StdResult<_> {
             total -= old.unwrap_or_default();
             total += add.weight;
             diffs.push(MemberDiff::new(add.addr, old, Some(add.weight)));
@@ -136,12 +139,12 @@ pub fn update_members(
 
     for remove in to_remove.into_iter() {
         let remove_addr = deps.api.addr_validate(&remove)?;
-        let old = MEMBERS.may_load(deps.storage, &remove_addr)?;
+        let old = MEMBERS.may_load(deps.storage, remove_addr.clone())?;
         // Only process this if they were actually in the list before
         if let Some(weight) = old {
             diffs.push(MemberDiff::new(remove, Some(weight), None));
             total -= weight;
-            MEMBERS.remove(deps.storage, &remove_addr, height)?;
+            MEMBERS.remove(deps.storage, remove_addr, height)?;
         }
     }
 
@@ -173,8 +176,8 @@ fn query_total_weight(deps: Deps) -> StdResult<TotalWeightResponse> {
 fn query_member(deps: Deps, addr: String, height: Option<u64>) -> StdResult<MemberResponse> {
     let addr = deps.api.addr_validate(&addr)?;
     let weight = match height {
-        Some(h) => MEMBERS.may_load_at_height(deps.storage, &addr, h),
-        None => MEMBERS.may_load(deps.storage, &addr),
+        Some(h) => MEMBERS.may_load_at_height(deps.storage, addr, h),
+        None => MEMBERS.may_load(deps.storage, addr),
     }?;
     Ok(MemberResponse { weight })
 }
@@ -189,19 +192,20 @@ fn list_members(
     limit: Option<u32>,
 ) -> StdResult<MemberListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let addr = maybe_addr(deps.api, start_after)?;
-    let start = addr.as_ref().map(Bound::exclusive);
+    let address = maybe_addr(deps.api, start_after)?;
 
-    let members = MEMBERS
-        .range(deps.storage, start, None, Order::Ascending)
+    let members_iter = if let Some(start) = address {
+        MEMBERS.iter_from(deps.storage, start)?.skip(1)
+    } else {
+        MEMBERS.iter(deps.storage).skip(0)
+    };
+    let members = members_iter
         .take(limit)
-        .map(|item| {
-            item.map(|(addr, weight)| Member {
-                addr: addr.into(),
-                weight,
-            })
+        .map(|(addr, weight)| Member {
+            addr: addr.into(),
+            weight,
         })
-        .collect::<StdResult<_>>()?;
+        .collect::<Vec<Member>>();
 
     Ok(MemberListResponse { members })
 }
@@ -512,7 +516,11 @@ mod tests {
             },
         ];
         let remove = vec![USER2.into()];
-        let msg = ExecuteMsg::UpdateMembers { remove, add };
+        let msg = ExecuteMsg::UpdateMembers {
+            remove,
+            add,
+            code_hash: None,
+        };
 
         // admin updates properly
         assert_users(&deps, Some(11), Some(6), None, None);
@@ -528,9 +536,10 @@ mod tests {
             MemberDiff::new(USER2, Some(6), None),
         ];
         let hook_msg = MemberChangedHookMsg { diffs };
-        let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1).unwrap());
-        let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2).unwrap());
-        assert_eq!(res.messages, vec![msg1, msg2]);
+        //let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1).unwrap());
+        //let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2).unwrap());
+        //assert_eq!(res.messages, vec![msg1, msg2]);
+        todo!()
     }
 
     #[test]
