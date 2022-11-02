@@ -409,10 +409,10 @@ fn list_votes(
     let addresses = match start_address {
         Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?.skip(1),
         None => VOTER_ADDRESSES.iter(deps.storage).skip(0),
-    }
-    .take(limit);
+    };
 
     let mut votes = vec![];
+    let mut ctr = 0;
     for addr in addresses {
         let ballot = match ballots.get(deps.storage, &addr) {
             Some(ballot) => ballot,
@@ -424,6 +424,10 @@ fn list_votes(
             vote: ballot.vote,
             weight: ballot.weight,
         });
+        ctr += 1;
+        if ctr == limit {
+            break;
+        }
     }
 
     Ok(VoteListResponse { votes })
