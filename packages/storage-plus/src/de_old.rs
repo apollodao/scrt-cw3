@@ -1,7 +1,7 @@
 use std::array::TryFromSliceError;
 use std::convert::TryInto;
 
-use cosmwasm_std::{StdError, StdResult};
+use secret_cosmwasm_std::{StdError, StdResult};
 
 use crate::de::KeyDeserialize;
 use crate::keys_old::IntKeyOld;

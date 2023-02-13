@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
+use secret_cosmwasm_std::entry_point;
+use secret_cosmwasm_std::{
     to_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     Response, StdError, StdResult, Storage,
 };
@@ -45,7 +45,9 @@ pub fn instantiate(
         total_weight,
         max_voting_period: msg.max_voting_period,
     };
-    CONFIG.save(deps.storage, &cfg)?;
+    CONFIG
+        .save(deps.storage, &cfg)
+        .map_err(|e| ContractError::Std(e))?;
 
     // add all voters
     for voter in msg.voters.iter() {
@@ -273,7 +275,7 @@ fn query_threshold(deps: Deps) -> StdResult<ThresholdResponse> {
 }
 
 fn query_proposal(deps: Deps, env: Env, id: u64) -> StdResult<ProposalResponse> {
-    let prop = get_proposal_std(deps.storage, &id)?;
+    let prop = get_proposal(deps.storage, &id)?;
     let status = prop.current_status(&env.block);
     let threshold = prop.threshold.to_response(prop.total_weight);
     Ok(ProposalResponse {
@@ -321,13 +323,15 @@ fn list_proposals(
         }?
     };
 
-    let mut page = vec![];
-    for id in page_keys {
-        page.push(map_proposal(
-            &env.block,
-            (id, get_proposal_std(deps.storage, &id)?),
-        ));
-    }
+    let page = page_keys
+        .iter()
+        .map(|id| {
+            Ok(proposal_to_response(
+                &env.block,
+                (*id, get_proposal(deps.storage, &id)?),
+            ))
+        })
+        .collect::<StdResult<Vec<_>>>()?;
 
     Ok(ProposalListResponse { proposals: page })
 }
@@ -425,7 +429,7 @@ fn list_voters(
 
 /// Utils
 
-fn map_proposal(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
+fn proposal_to_response(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
     let (id, prop) = item;
     let status = prop.current_status(block);
     let threshold = prop.threshold.to_response(prop.total_weight);
@@ -440,21 +444,16 @@ fn map_proposal(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
     }
 }
 
-// @todo do this with macros
-fn get_proposal(store: &dyn Storage, id: &u64) -> Result<Proposal, ContractError> {
-    PROPOSALS.get(store, id).ok_or(ContractError::NotFound {})
-}
-
-fn get_proposal_std(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
-    PROPOSALS.get(store, id).ok_or(StdError::NotFound {
-        kind: "Proposal".to_string(),
-    })
+fn get_proposal(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
+    PROPOSALS
+        .get(store, id)
+        .ok_or_else(|| StdError::not_found("Proposal"))
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coin, from_binary, BankMsg, Decimal};
+    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use secret_cosmwasm_std::{coin, from_binary, BankMsg, Decimal};
 
     use cw2::{get_contract_version, ContractVersion};
     use cw_utils::{Duration, Threshold};

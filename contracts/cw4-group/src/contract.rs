@@ -1,14 +1,14 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
-};
 use cw2::set_contract_version;
 use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
 use cw_utils::maybe_addr;
+#[cfg(not(feature = "library"))]
+use secret_cosmwasm_std::entry_point;
+use secret_cosmwasm_std::{
+    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
+};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -74,8 +74,8 @@ pub fn execute(
         ExecuteMsg::UpdateMembers {
             add,
             remove,
-            code_hash,
-        } => execute_update_members(deps, env, info, add, remove, code_hash),
+            callback_code_hash,
+        } => execute_update_members(deps, env, info, add, remove, callback_code_hash),
         ExecuteMsg::AddHook { addr } => {
             Ok(HOOKS.execute_add_hook(&ADMIN, deps, info, api.addr_validate(&addr)?)?)
         }
@@ -213,10 +213,10 @@ fn list_members(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{from_slice, Api, OwnedDeps, Querier, Storage};
     use cw4::{member_key, TOTAL_KEY};
     use cw_controllers::{AdminError, HookError};
+    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use secret_cosmwasm_std::{from_slice, Api, OwnedDeps, Querier, Storage};
 
     const INIT_ADMIN: &str = "juan";
     const USER1: &str = "somebody";
@@ -519,7 +519,7 @@ mod tests {
         let msg = ExecuteMsg::UpdateMembers {
             remove,
             add,
-            code_hash: None,
+            callback_code_hash: None,
         };
 
         // admin updates properly

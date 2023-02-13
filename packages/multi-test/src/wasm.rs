@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 
-use cosmwasm_std::{
+use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
+use prost::Message;
+use schemars::JsonSchema;
+use secret_cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
     ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
     QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
     SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
-use cosmwasm_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
-use prost::Message;
-use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ use crate::contracts::Contract;
 use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::transactions::transactional;
-use cosmwasm_std::testing::mock_wasmd_attr;
+use secret_cosmwasm_std::testing::mock_wasmd_attr;
 
 use anyhow::{bail, Context, Result as AnyResult};
 
@@ -904,8 +904,10 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, StdError};
+    use secret_cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
+    use secret_cosmwasm_std::{
+        coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, StdError,
+    };
 
     use crate::app::Router;
     use crate::bank::BankKeeper;

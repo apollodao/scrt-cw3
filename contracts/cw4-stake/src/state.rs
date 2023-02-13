@@ -1,12 +1,12 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Uint128};
 use cw20::Denom;
 use cw4::TOTAL_KEY;
 use cw_controllers::{Admin, Claims, Hooks};
 use cw_storage_plus::{Item, Map, SnapshotMap, Strategy};
 use cw_utils::Duration;
+use secret_cosmwasm_std::{Addr, Uint128};
 
 pub const CLAIMS: Claims = Claims::new("claims");
 
@@ -28,6 +28,7 @@ pub const MEMBERS: SnapshotMap<&Addr, u64> = SnapshotMap::new(
     cw4::MEMBERS_KEY,
     cw4::MEMBERS_CHECKPOINTS,
     cw4::MEMBERS_CHANGELOG,
+    cw4::MEMBERS_HEIGHT_INDEX,
     Strategy::EveryBlock,
 );
 

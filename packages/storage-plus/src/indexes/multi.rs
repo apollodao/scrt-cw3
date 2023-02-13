@@ -4,7 +4,7 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use cosmwasm_std::{from_slice, Order, Record, StdError, StdResult, Storage};
+use secret_cosmwasm_std::{from_slice, Order, Record, StdError, StdResult, Storage};
 
 use crate::bound::PrefixBound;
 use crate::de::KeyDeserialize;

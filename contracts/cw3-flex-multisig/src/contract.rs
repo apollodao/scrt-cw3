@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
+use secret_cosmwasm_std::entry_point;
+use secret_cosmwasm_std::{
     to_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     Response, StdError, StdResult, Storage,
 };
@@ -307,7 +307,7 @@ fn query_threshold(deps: Deps) -> StdResult<ThresholdResponse> {
 }
 
 fn query_proposal(deps: Deps, env: Env, id: u64) -> StdResult<ProposalResponse> {
-    let prop = get_proposal_std(deps.storage, &id)?;
+    let prop = get_proposal(deps.storage, &id)?;
     let status = prop.current_status(&env.block);
     let threshold = prop.threshold.to_response(prop.total_weight);
     Ok(ProposalResponse {
@@ -359,7 +359,7 @@ fn list_proposals(
     for id in page_keys {
         page.push(map_proposal(
             &env.block,
-            (id, get_proposal_std(deps.storage, &id)?),
+            (id, get_proposal(deps.storage, &id)?),
         ));
     }
 
@@ -459,20 +459,16 @@ fn list_voters(
     Ok(VoterListResponse { voters })
 }
 
-fn get_proposal(store: &dyn Storage, id: &u64) -> Result<Proposal, ContractError> {
-    PROPOSALS.get(store, id).ok_or(ContractError::NotFound {})
-}
-
-fn get_proposal_std(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
-    PROPOSALS.get(store, id).ok_or(StdError::NotFound {
-        kind: "Proposal".to_string(),
-    })
+fn get_proposal(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
+    PROPOSALS
+        .get(store, id)
+        .ok_or_else(|| StdError::not_found("Proposal"))
 }
 
 /*
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, Decimal, Timestamp};
+    use secret_cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, Decimal, Timestamp};
 
     use cw2::ContractVersion;
     use cw4::{Cw4ExecuteMsg, Member};

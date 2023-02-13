@@ -22,8 +22,7 @@ pub enum ExecuteMsg {
     UpdateMembers {
         remove: Vec<String>,
         add: Vec<Member>,
-        // This could arguably just be a string, as it is unwrapped to default "" if None
-        code_hash: Option<String>,
+        callback_code_hash: Option<String>,
     },
     /// Add a new hook to be informed of all membership changes. Must be called by Admin
     AddHook { addr: String },

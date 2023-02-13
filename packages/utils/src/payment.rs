@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin, MessageInfo, Uint128};
+use secret_cosmwasm_std::{Coin, MessageInfo, Uint128};
 use thiserror::Error;
 
 /// returns an error if any coins were sent
@@ -73,8 +73,8 @@ pub enum PaymentError {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing::mock_info;
-    use cosmwasm_std::{coin, coins};
+    use secret_cosmwasm_std::testing::mock_info;
+    use secret_cosmwasm_std::{coin, coins};
 
     const SENDER: &str = "sender";
 

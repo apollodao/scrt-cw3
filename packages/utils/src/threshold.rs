@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Decimal, StdError};
+use secret_cosmwasm_std::{Decimal, StdError};
 use thiserror::Error;
 
 /// This defines the different ways tallies can happen.

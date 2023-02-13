@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{from_slice, Binary, Order, Record, StdError, StdResult, Storage};
+use secret_cosmwasm_std::{from_slice, Binary, Order, Record, StdError, StdResult, Storage};
 
 use crate::bound::PrefixBound;
 use crate::de::KeyDeserialize;

@@ -9,7 +9,7 @@ pub use unique::UniqueIndex;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use cosmwasm_std::{StdResult, Storage};
+use secret_cosmwasm_std::{StdResult, Storage};
 
 // Note: we cannot store traits with generic functions inside `Box<dyn Index>`,
 // so I pull S: Storage to a top-level

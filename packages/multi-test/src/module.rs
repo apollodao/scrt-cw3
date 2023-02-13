@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use anyhow::{bail, Result as AnyResult};
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
+use secret_cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 
 use crate::app::CosmosRouter;
 use crate::AppResponse;

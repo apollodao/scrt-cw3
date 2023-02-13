@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    coins, from_slice, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order,
-    Response, StdResult, Storage, SubMsg, Uint128, WasmMsg,
+use secret_cosmwasm_std::entry_point;
+use secret_cosmwasm_std::{
+    coins, from_slice, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -11,7 +11,6 @@ use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
-use cw_storage_plus::Bound;
 use cw_utils::{maybe_addr, NativeBalance};
 
 use crate::error::ContractError;
@@ -357,14 +356,14 @@ fn list_members(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{
-        coin, from_slice, CosmosMsg, OverflowError, OverflowOperation, StdError, Storage,
-    };
     use cw20::Denom;
     use cw4::{member_key, TOTAL_KEY};
     use cw_controllers::{AdminError, Claim, HookError};
     use cw_utils::Duration;
+    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use secret_cosmwasm_std::{
+        coin, from_slice, CosmosMsg, OverflowError, OverflowOperation, StdError, Storage,
+    };
 
     use crate::error::ContractError;
 

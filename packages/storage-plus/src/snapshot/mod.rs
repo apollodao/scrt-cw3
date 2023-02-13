@@ -1,11 +1,8 @@
-//#![cfg(feature = "iterator")]
-mod item;
 mod map;
 
-//pub use item::SnapshotItem;
 pub use map::SnapshotMap;
 
-use cosmwasm_std::{StdError, StdResult, Storage};
+use secret_cosmwasm_std::{StdError, StdResult, Storage};
 use secret_toolkit::serialization::Json;
 use secret_toolkit::storage::Keymap as Map;
 use serde::de::DeserializeOwned;
@@ -52,16 +49,12 @@ where
     }
 
     pub fn add_checkpoint(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
-        let count = match self.checkpoints.get(store, &height) {
-            Some(count) => count + 1,
-            None => 1,
-        };
+        let count = self.checkpoints.get(store, &height).unwrap_or_default() + 1;
         self.checkpoints.insert(store, &height, &count)
     }
 
     pub fn remove_checkpoint(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
-        // If we allow actual removes then order is not guaranteed to be preserved
-        // NOTE: remove_checkpoint is never called in the cw4-group contract
+        // soft removes checkpoint to preserve order
         // so this is just for show
         match self.checkpoints.get(store, &height).unwrap_or_default() {
             count if count > 0 => self.checkpoints.insert(store, &height, &(count - 1)),
@@ -206,7 +199,7 @@ pub struct ChangeSet<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::MockStorage;
+    use secret_cosmwasm_std::testing::MockStorage;
 
     type TestSnapshot = Snapshot<'static, u64>;
 

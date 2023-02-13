@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{BlockInfo, StdError, StdResult, Timestamp};
+use secret_cosmwasm_std::{BlockInfo, StdError, StdResult, Timestamp};
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, Mul};

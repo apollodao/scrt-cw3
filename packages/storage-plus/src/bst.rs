@@ -2,8 +2,8 @@ use std::{any::type_name, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use cosmwasm_std::{StdError, StdResult, Storage};
-use cosmwasm_storage::to_length_prefixed;
+use secret_cosmwasm_std::{StdError, StdResult, Storage};
+use secret_cosmwasm_storage::to_length_prefixed;
 use secret_toolkit::serialization::{Json, Serde};
 
 pub struct BinarySearchTree<'a, T, Ser = Json>
@@ -257,7 +257,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use secret_cosmwasm_std::{testing::mock_dependencies, Addr};
 
     #[test]
     fn bst_iter() {
@@ -271,7 +271,6 @@ mod test {
         for item in &items {
             let res = bst.insert(storage, &item);
             assert!(res.is_ok());
-            //println!("Item: {:?}", storage.get(&res.unwrap()).unwrap());
         }
         let sorted = bst.iter(storage).collect::<Vec<_>>();
         items.sort();
@@ -290,7 +289,6 @@ mod test {
         for item in &items {
             let res = bst.insert(storage, &item);
             assert!(res.is_ok());
-            //println!("Item: {:?}", storage.get(&res.unwrap()).unwrap());
         }
         items.sort();
         let sorted = bst

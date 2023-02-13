@@ -1,7 +1,7 @@
 use std::fmt;
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
 use schemars::JsonSchema;
+use secret_cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
 
 use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
 

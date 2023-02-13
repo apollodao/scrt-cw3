@@ -13,7 +13,7 @@ documentation = "https://docs.cosmwasm.com"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = ["secret-cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -23,14 +23,12 @@ cw2 = { path = "../../packages/cw2", version = "0.13.4" }
 cw3 = { path = "../../packages/cw3", version = "0.13.4" }
 cw3-fixed-multisig = { path = "../cw3-fixed-multisig", version = "0.13.4", features = ["library"] }
 cw4 = { path = "../../packages/cw4", version = "0.13.4" }
-#secret-toolkit = { version = "0.4", default-features = false, features = ["utils", "storage", "serialization"] }
-secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", branch = "cosmwasm-v1.0", default-features = false, features = ["utils", "storage", "serialization"]}
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.8.1"
+secret-cosmwasm-std = "1.0.0"
+schemars = "0.8.11"
+secret-toolkit = { version = "0.7.0", default-features = false, features = ["utils", "storage", "serialization"]}
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0" }
 cw4-group = { path = "../cw4-group", version = "0.13.4" }
-#cw-multi-test = { path = "../../packages/multi-test", version = "0.13.4" }

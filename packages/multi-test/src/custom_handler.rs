@@ -4,7 +4,7 @@ use std::cell::{Ref, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
 
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
+use secret_cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
 
 use crate::app::CosmosRouter;
 use crate::{AppResponse, Module};

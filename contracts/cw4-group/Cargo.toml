@@ -21,7 +21,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
+backtraces = ["secret-cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
 
@@ -31,9 +31,9 @@ cw2 = { path = "../../packages/cw2", version = "0.13.4" }
 cw4 = { path = "../../packages/cw4", version = "0.13.4" }
 cw-controllers = { path = "../../packages/controllers", version = "0.13.4" }
 cw-storage-plus = { path = "../../packages/storage-plus", version = "0.13.4" }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.8.1"
-secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit", branch = "cosmwasm-v1.0", default-features = false, features = ["utils", "storage", "serialization"]}
+secret-cosmwasm-std = "1.0.0"
+schemars = "0.8.11"
+secret-toolkit = { version = "0.7.0", default-features = false, features = ["utils", "storage", "serialization"]}
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
 

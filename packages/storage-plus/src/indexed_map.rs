@@ -2,7 +2,7 @@
 #![cfg(feature = "iterator")]
 
 use crate::PrefixBound;
-use cosmwasm_std::{StdError, StdResult, Storage};
+use secret_cosmwasm_std::{StdError, StdResult, Storage};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -279,8 +279,8 @@ mod test {
 
     use crate::indexes::test::{index_string_tuple, index_tuple};
     use crate::{MultiIndex, UniqueIndex};
-    use cosmwasm_std::testing::MockStorage;
-    use cosmwasm_std::{MemoryStorage, Order};
+    use secret_cosmwasm_std::testing::MockStorage;
+    use secret_cosmwasm_std::{MemoryStorage, Order};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

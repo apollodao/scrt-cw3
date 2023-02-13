@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
-use cosmwasm_std::{
+use cw_storage_plus::Item;
+use secret_cosmwasm_std::{
     attr, Addr, CustomQuery, Deps, DepsMut, MessageInfo, Response, StdError, StdResult, Storage,
     SubMsg,
 };
-use cw_storage_plus::Item;
 
 use crate::admin::{Admin, AdminError};
 

@@ -1,5 +1,5 @@
-use cosmwasm_std::Coin;
 use schemars::JsonSchema;
+use secret_cosmwasm_std::Coin;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

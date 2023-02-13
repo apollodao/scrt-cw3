@@ -3,7 +3,7 @@
 //!
 //! Additionally it bypass all events and attributes send to it
 
-use cosmwasm_std::{
+use secret_cosmwasm_std::{
     to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
     StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };

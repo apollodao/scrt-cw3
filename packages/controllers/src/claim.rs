@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, BlockInfo, CustomQuery, Deps, StdResult, Storage, Uint128};
 use cw_storage_plus::Map;
 use cw_utils::Expiration;
+use secret_cosmwasm_std::{Addr, BlockInfo, CustomQuery, Deps, StdResult, Storage, Uint128};
 
 // TODO: pull into utils?
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -98,7 +98,7 @@ impl<'a> Claims<'a> {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     use super::*;
     const TEST_AMOUNT: u128 = 1000u128;

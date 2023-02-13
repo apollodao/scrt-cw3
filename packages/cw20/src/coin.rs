@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Uint128};
+use secret_cosmwasm_std::{Addr, Uint128};
 use std::fmt;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

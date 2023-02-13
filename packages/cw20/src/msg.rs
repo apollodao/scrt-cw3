@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::logo::Logo;
-use cosmwasm_std::{Binary, Uint128};
 use cw_utils::Expiration;
+use secret_cosmwasm_std::{Binary, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]

@@ -1,4 +1,4 @@
-use cosmwasm_std::Response;
+use secret_cosmwasm_std::Response;
 
 /// This defines a set of attributes which should be added to `Response`.
 pub trait Event {

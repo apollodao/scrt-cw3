@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{fmt, ops};
 
-use cosmwasm_std::{Coin, OverflowError, OverflowOperation, StdError, StdResult, Uint128};
+use secret_cosmwasm_std::{Coin, OverflowError, OverflowOperation, StdError, StdResult, Uint128};
 
 // Balance wraps Vec<Coin> and provides some nice helpers. It mutates the Vec and can be
 // unwrapped when done.
@@ -182,7 +182,7 @@ impl ops::Sub<Vec<Coin>> for NativeBalance {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::coin;
+    use secret_cosmwasm_std::coin;
 
     #[test]
     fn balance_has_works() {

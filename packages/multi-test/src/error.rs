@@ -1,4 +1,4 @@
-use cosmwasm_std::{WasmMsg, WasmQuery};
+use secret_cosmwasm_std::{WasmMsg, WasmQuery};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]

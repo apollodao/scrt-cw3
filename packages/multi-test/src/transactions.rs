@@ -8,9 +8,9 @@ use std::iter::Peekable;
 #[cfg(feature = "iterator")]
 use std::ops::{Bound, RangeBounds};
 
-use cosmwasm_std::Storage;
+use secret_cosmwasm_std::Storage;
 #[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, Record};
+use secret_cosmwasm_std::{Order, Record};
 
 use anyhow::Result as AnyResult;
 
@@ -271,7 +271,7 @@ mod test {
     use std::cell::RefCell;
     use std::ops::{Deref, DerefMut};
 
-    use cosmwasm_std::MemoryStorage;
+    use secret_cosmwasm_std::MemoryStorage;
 
     #[test]
     fn wrap_storage() {

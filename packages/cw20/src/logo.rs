@@ -1,5 +1,5 @@
-use cosmwasm_std::Binary;
 use schemars::JsonSchema;
+use secret_cosmwasm_std::Binary;
 use serde::{Deserialize, Serialize};
 
 /// This is used for uploading logo data, or setting it in InstantiateData

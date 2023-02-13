@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use cosmwasm_std::{CosmosMsg, Empty};
 use cw_utils::{Expiration, ThresholdResponse};
+use secret_cosmwasm_std::{CosmosMsg, Empty};
 
 use crate::msg::Vote;
 

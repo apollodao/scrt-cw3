@@ -1,5 +1,5 @@
-use cosmwasm_std::StdError;
 use cw_utils::ThresholdError;
+use secret_cosmwasm_std::StdError;
 
 use thiserror::Error;
 
@@ -22,9 +22,6 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-
-    #[error("Proposal does not exist")]
-    NotFound {},
 
     #[error("Proposal is not open")]
     NotOpen {},

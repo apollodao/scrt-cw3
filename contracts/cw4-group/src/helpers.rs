@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use cw4::{Cw4Contract, Member};
+use secret_cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 
 use crate::msg::ExecuteMsg;
 
@@ -41,12 +41,12 @@ impl Cw4GroupContract {
         &self,
         remove: Vec<String>,
         add: Vec<Member>,
-        code_hash: Option<String>,
+        callback_code_hash: Option<String>,
     ) -> StdResult<CosmosMsg> {
         let msg = ExecuteMsg::UpdateMembers {
             remove,
             add,
-            code_hash,
+            callback_code_hash,
         };
         self.encode_msg(msg)
     }

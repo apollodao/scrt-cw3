@@ -1,6 +1,6 @@
 #![cfg(feature = "iterator")]
 
-use cosmwasm_std::Addr;
+use secret_cosmwasm_std::Addr;
 use std::marker::PhantomData;
 
 use crate::de::KeyDeserialize;

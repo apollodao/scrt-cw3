@@ -3,7 +3,7 @@ use std::{any::type_name, marker::PhantomData};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use cosmwasm_std::{
+use secret_cosmwasm_std::{
     Addr, BlockInfo, CosmosMsg, Decimal, Empty, StdError, StdResult, Storage, Uint128,
 };
 
@@ -191,7 +191,7 @@ type VoterWeight = u64;
 pub static CONFIG: Item<Config, Json> = Item::new(b"config");
 pub static PROPOSAL_COUNT: Item<u64, Json> = Item::new(b"proposal_count");
 
-// binary search tree (heap)
+// Binary search tree holding the keys for the `VOTERS` and `BALLOTS` maps
 pub static VOTER_ADDRESSES: BinarySearchTree<Addr> = BinarySearchTree::new(b"voter_addresses");
 
 // maps
@@ -209,7 +209,7 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     #[test]
     fn count_votes() {
@@ -620,7 +620,6 @@ mod test {
         for item in &items {
             let res = bst.insert(storage, &item);
             assert!(res.is_ok());
-            //println!("Item: {:?}", storage.get(&res.unwrap()).unwrap());
         }
         let sorted = bst.iter(storage).collect::<Vec<_>>();
         items.sort();
@@ -639,7 +638,6 @@ mod test {
         for item in &items {
             let res = bst.insert(storage, &item);
             assert!(res.is_ok());
-            //println!("Item: {:?}", storage.get(&res.unwrap()).unwrap());
         }
         items.sort();
         let sorted = bst

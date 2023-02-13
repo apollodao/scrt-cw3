@@ -50,7 +50,7 @@ pub(crate) fn remove_with_prefix(storage: &mut dyn Storage, namespace: &[u8], ke
 mod legacy_test {
     use super::*;
     use crate::helpers::*;
-    use cosmwasm_std::testing::MockStorage;
+    use secret_cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn to_length_prefixed_nested_works() {
@@ -117,7 +117,6 @@ mod legacy_test {
         assert_eq!(key.capacity(), key.len());
     }
 
-
     #[test]
     fn prefix_get_set() {
         let mut storage = MockStorage::new();
@@ -132,5 +131,4 @@ mod legacy_test {
         let collision = get_with_prefix(&storage, &other_prefix, b"obar");
         assert_eq!(collision, None);
     }
-
 }

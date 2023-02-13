@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{CosmosMsg, Empty};
 use cw3::Vote;
 use cw_utils::{Duration, Expiration, Threshold};
+use secret_cosmwasm_std::{CosmosMsg, Empty};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct InstantiateMsg {
