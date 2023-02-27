@@ -536,10 +536,9 @@ mod tests {
             MemberDiff::new(USER2, Some(6), None),
         ];
         let hook_msg = MemberChangedHookMsg { diffs };
-        //let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1).unwrap());
-        //let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2).unwrap());
-        //assert_eq!(res.messages, vec![msg1, msg2]);
-        todo!()
+        let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1, None).unwrap());
+        let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2, None).unwrap());
+        assert_eq!(res.messages, vec![msg1, msg2]);
     }
 
     #[test]
