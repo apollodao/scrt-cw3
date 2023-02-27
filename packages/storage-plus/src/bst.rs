@@ -1,4 +1,4 @@
-use std::{any::type_name, marker::PhantomData};
+use std::{any::type_name, iter, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -15,16 +15,6 @@ where
     prefix: Option<Vec<u8>>,
     item_type: PhantomData<T>,
     serialization_type: PhantomData<Ser>,
-}
-
-pub struct BinarySearchTreeIterator<'a, T, Ser = Json>
-where
-    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
-    Ser: Serde,
-{
-    current: BinarySearchTree<'a, T, Ser>,
-    storage: &'a dyn Storage,
-    stack: Vec<BinarySearchTree<'a, T, Ser>>,
 }
 
 impl<'a, T, Ser> BinarySearchTree<'a, T, Ser>
@@ -167,26 +157,53 @@ where
     }
 
     /// Returns a sorted iter of self, lazily evaluated
-    pub fn iter(&self, storage: &'a dyn Storage) -> BinarySearchTreeIterator<'a, T, Ser> {
+    pub fn iter<'b>(&self, storage: &'b dyn Storage) -> BinarySearchTreeIterator<'a, 'b, T, Ser> {
         BinarySearchTreeIterator::new(self.clone(), storage)
     }
 
-    pub fn iter_from(
+    pub fn iter_from<'b>(
         &self,
-        storage: &'a dyn Storage,
+        storage: &'b dyn Storage,
         elem: &T,
-    ) -> StdResult<BinarySearchTreeIterator<'a, T, Ser>> {
+    ) -> StdResult<BinarySearchTreeIterator<'a, 'b, T, Ser>> {
         let start = match self.find(storage, elem) {
+            // Element found
             Ok((key, true)) => Ok(key),
-            Ok((_, false)) => Err(StdError::GenericErr {
-                msg: "Starting element not found".to_string(),
-            }),
+            // Element not found in the tree
+            Ok((key, false)) => {
+                // If the root is empty, the whole tree is empty
+                if key == self.key {
+                    return Ok(BinarySearchTreeIterator::empty(storage));
+                }
+                if let Some(last) = key.last() {
+                    // If the suggested insert position is a left node, start iterating from the parent
+                    if *last == b'L' {
+                        // We can unwrap() here because we already know `key` isn't empty
+                        return self.iter_from_key(storage, key.split_last().unwrap().1);
+                    // If it's a right node, there is no larger element in the tree
+                    } else {
+                        return Ok(BinarySearchTreeIterator::empty(storage));
+                    }
+                } else {
+                    // What does it mean if key is empty? Can it happen?
+                    todo!()
+                }
+            }
+            // Probably a storage error
             Err(e) => Err(e),
         }?;
+        self.iter_from_key(storage, &start)
+    }
+
+    fn iter_from_key<'b>(
+        &self,
+        storage: &'b dyn Storage,
+        start_key: &[u8],
+    ) -> StdResult<BinarySearchTreeIterator<'a, 'b, T, Ser>> {
         let mut stack = vec![];
-        for i in self.key.len()..start.len() + 1 {
-            let key = &start[0..i];
-            if let Some(next_branch) = start.get(i) {
+        for i in self.key.len()..start_key.len() + 1 {
+            let key = &start_key[0..i];
+            if let Some(next_branch) = start_key.get(i) {
                 // if next node is to the right
                 // current node is smaller and should not be included
                 if *next_branch == b'R' {
@@ -210,12 +227,22 @@ where
     }
 }
 
-impl<'a, T, Ser> BinarySearchTreeIterator<'a, T, Ser>
+pub struct BinarySearchTreeIterator<'a, 'b, T, Ser = Json>
 where
     T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
 {
-    pub fn new(root: BinarySearchTree<'a, T, Ser>, storage: &'a dyn Storage) -> Self {
+    current: BinarySearchTree<'a, T, Ser>,
+    storage: &'b dyn Storage,
+    stack: Vec<BinarySearchTree<'a, T, Ser>>,
+}
+
+impl<'a, 'b, T, Ser> BinarySearchTreeIterator<'a, 'b, T, Ser>
+where
+    T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
+    Ser: Serde,
+{
+    pub const fn new(root: BinarySearchTree<'a, T, Ser>, storage: &'b dyn Storage) -> Self {
         let stack: Vec<BinarySearchTree<'a, T, Ser>> = vec![];
         Self {
             current: root,
@@ -223,9 +250,13 @@ where
             stack,
         }
     }
+
+    pub(self) const fn empty(storage: &'b dyn Storage) -> Self {
+        Self::new(BinarySearchTree::new(b"iter_root"), storage)
+    }
 }
 
-impl<'a, T, Ser> Iterator for BinarySearchTreeIterator<'a, T, Ser>
+impl<'a, 'b, T, Ser> Iterator for BinarySearchTreeIterator<'a, 'b, T, Ser>
 where
     T: Serialize + DeserializeOwned + PartialEq + PartialOrd,
     Ser: Serde,
