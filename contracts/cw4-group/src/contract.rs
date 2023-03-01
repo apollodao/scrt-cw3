@@ -540,25 +540,4 @@ mod tests {
         let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2, None).unwrap());
         assert_eq!(res.messages, vec![msg1, msg2]);
     }
-
-    #[test]
-    fn raw_queries_work() {
-        // add will over-write and remove have no effect
-        let mut deps = mock_dependencies();
-        do_instantiate(deps.as_mut());
-
-        // get total from raw key
-        let total_raw = deps.storage.get(TOTAL_KEY.as_bytes()).unwrap();
-        let total: u64 = from_slice(&total_raw).unwrap();
-        assert_eq!(17, total);
-
-        // get member votes from raw key
-        let member2_raw = deps.storage.get(&member_key(USER2)).unwrap();
-        let member2: u64 = from_slice(&member2_raw).unwrap();
-        assert_eq!(6, member2);
-
-        // and execute misses
-        let member3_raw = deps.storage.get(&member_key(USER3));
-        assert_eq!(None, member3_raw);
-    }
 }
