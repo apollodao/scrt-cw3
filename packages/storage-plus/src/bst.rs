@@ -1,10 +1,13 @@
-use std::{any::type_name, iter, marker::PhantomData};
+use std::{any::type_name, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Serialize};
 
 use secret_cosmwasm_std::{StdError, StdResult, Storage};
 use secret_cosmwasm_storage::to_length_prefixed;
 use secret_toolkit::serialization::{Json, Serde};
+
+const LEFT: u8 = 1;
+const RIGHT: u8 = 2;
 
 pub struct BinarySearchTree<'a, T, Ser = Json>
 where
@@ -61,9 +64,9 @@ where
         }
     }
 
-    /// Returns a BST representation of the left node
+    /// Returns a BST representation of the left-hand child
     pub fn left(&self) -> Self {
-        let suffix = b"L";
+        let suffix = &[LEFT];
         let prefix = if let Some(prefix) = &self.prefix {
             [prefix.clone(), suffix.to_vec()].concat()
         } else {
@@ -77,9 +80,9 @@ where
         }
     }
 
-    /// Returns a BST representation of the right node
+    /// Returns a BST representation of the right-hand child
     pub fn right(&self) -> Self {
-        let suffix = b"R";
+        let suffix = &[RIGHT];
         let prefix = if let Some(prefix) = &self.prefix {
             [prefix.clone(), suffix.to_vec()].concat()
         } else {
@@ -156,6 +159,38 @@ where
         Ok(key.to_vec())
     }
 
+    fn backtrack(&self, key: Vec<u8>) -> StdResult<Vec<u8>> {
+        let mut current = key;
+        loop {
+            if let Some((relation, parent)) = key.split_last() {
+                if *relation == LEFT {
+                    return Ok(parent.to_vec());
+                } else if *relation == RIGHT {
+                    current = parent.to_vec();
+                } else {
+                    // we're at the root
+                    return Ok(current);
+                }
+            } else {
+                return Err(StdError::generic_err("Key is empty."));
+            }
+        }
+    }
+
+    fn next<'b>(&self, storage: &'b dyn Storage, key: Vec<u8>) -> StdResult<Vec<u8>> {
+        if let Some(k) = storage.get(&[key, vec![RIGHT]].concat()) {
+            let mut current = key;
+            current.push(RIGHT);
+            loop {
+                match storage.get(&[current, vec![LEFT]].concat()) {
+                    Some(j) => current.push(LEFT),
+                    None => return Ok(current),
+                }
+            }
+        }
+        self.backtrack(key)
+    }
+
     /// Returns a sorted iter of self, lazily evaluated
     pub fn iter<'b>(&self, storage: &'b dyn Storage) -> BinarySearchTreeIterator<'a, 'b, T, Ser> {
         BinarySearchTreeIterator::new(self.clone(), storage)
@@ -165,29 +200,24 @@ where
         &self,
         storage: &'b dyn Storage,
         elem: &T,
+        exclusive: bool,
     ) -> StdResult<BinarySearchTreeIterator<'a, 'b, T, Ser>> {
         let start = match self.find(storage, elem) {
             // Element found
-            Ok((key, true)) => Ok(key),
+            Ok((key, true)) => {
+                if exclusive {
+                    // todo find second element in order
+                    return self.iter_from_key(storage, &self.next(storage, key)?);
+                }
+                Ok(key)
+            }
             // Element not found in the tree
             Ok((key, false)) => {
                 // If the root is empty, the whole tree is empty
                 if key == self.key {
                     return Ok(BinarySearchTreeIterator::empty(storage));
                 }
-                if let Some(last) = key.last() {
-                    // If the suggested insert position is a left node, start iterating from the parent
-                    if *last == b'L' {
-                        // We can unwrap() here because we already know `key` isn't empty
-                        return self.iter_from_key(storage, key.split_last().unwrap().1);
-                    // If it's a right node, there is no larger element in the tree
-                    } else {
-                        return Ok(BinarySearchTreeIterator::empty(storage));
-                    }
-                } else {
-                    // What does it mean if key is empty? Can it happen?
-                    todo!()
-                }
+                return self.iter_from_key(storage, &self.backtrack(key)?);
             }
             // Probably a storage error
             Err(e) => Err(e),
@@ -206,7 +236,7 @@ where
             if let Some(next_branch) = start_key.get(i) {
                 // if next node is to the right
                 // current node is smaller and should not be included
-                if *next_branch == b'R' {
+                if *next_branch == RIGHT {
                     continue;
                 }
             }
@@ -309,7 +339,7 @@ mod test {
     }
 
     #[test]
-    fn bst_iter_from() {
+    fn bst_iter_from_exclusive() {
         let mut deps = mock_dependencies();
         let storage = deps.as_mut().storage;
         let bst: BinarySearchTree<Addr> = BinarySearchTree::new(b"test");
@@ -323,7 +353,28 @@ mod test {
         }
         items.sort();
         let sorted = bst
-            .iter_from(storage, &items[3])
+            .iter_from(storage, &items[3], true)
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert_eq!(sorted, (&items[4..]).to_vec())
+    }
+
+    #[test]
+    fn bst_iter_from_inclusive() {
+        let mut deps = mock_dependencies();
+        let storage = deps.as_mut().storage;
+        let bst: BinarySearchTree<Addr> = BinarySearchTree::new(b"test");
+        let mut items: Vec<Addr> = vec!["def", "secret", "ghi", "deadbeef", "abc", "lol", "test"]
+            .iter_mut()
+            .map(|s| Addr::unchecked(s.to_string()))
+            .collect();
+        for item in &items {
+            let res = bst.insert(storage, &item);
+            assert!(res.is_ok());
+        }
+        items.sort();
+        let sorted = bst
+            .iter_from(storage, &items[3], false)
             .unwrap()
             .collect::<Vec<_>>();
         assert_eq!(sorted, (&items[3..]).to_vec())
