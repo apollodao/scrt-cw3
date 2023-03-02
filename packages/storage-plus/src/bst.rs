@@ -1,4 +1,4 @@
-use std::{any::type_name, marker::PhantomData};
+use std::{any::type_name, marker::PhantomData, str::FromStr};
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -96,7 +96,7 @@ where
         }
     }
 
-    /// Checks to see if root node is empty
+    /// Checks to see if node is empty
     pub fn is_empty(&self, storage: &dyn Storage) -> bool {
         storage.get(self.as_slice()).is_none()
     }
@@ -146,7 +146,7 @@ where
     }
 
     /// Inserts `elem` into tree, returning an error if item already exists or on
-    /// parsing errors
+    /// parsing errors.
     pub fn insert(&self, storage: &mut dyn Storage, elem: &T) -> StdResult<Vec<u8>> {
         let key = match self.find(storage, elem) {
             Ok((k, false)) => Ok(k),
@@ -159,30 +159,45 @@ where
         Ok(key.to_vec())
     }
 
+    /// Traverses the tree upwards to find the key with the next biggest element.
+    /// Called when there is no right-hand child at `key`.
     fn backtrack(&self, key: Vec<u8>) -> StdResult<Vec<u8>> {
+        // Checks the edge case where `key` is in the right-most position (largest element in tree)
+        if key
+            .clone()
+            .iter()
+            .filter(|b| **b == LEFT || **b == RIGHT)
+            .all(|r| *r == RIGHT)
+        {
+            return Ok(key);
+        }
         let mut current = key;
         loop {
-            if let Some((relation, parent)) = key.split_last() {
+            if let Some((relation, parent)) = current.split_last() {
                 if *relation == LEFT {
-                    return Ok(parent.to_vec());
-                } else if *relation == RIGHT {
+                    // Found the next biggest element
                     current = parent.to_vec();
+                    break;
+                } else if *relation == RIGHT {
+                    current = parent.to_vec()
                 } else {
-                    // we're at the root
-                    return Ok(current);
+                    // We're at the root
+                    break;
                 }
             } else {
                 return Err(StdError::generic_err("Key is empty."));
             }
         }
+        Ok(current)
     }
 
-    fn next<'b>(&self, storage: &'b dyn Storage, key: Vec<u8>) -> StdResult<Vec<u8>> {
-        if let Some(k) = storage.get(&[key, vec![RIGHT]].concat()) {
-            let mut current = key;
+    /// Finds the key of the next biggest element after the supplied key.
+    pub fn next<'b>(&self, storage: &'b dyn Storage, key: Vec<u8>) -> StdResult<Vec<u8>> {
+        let mut current = key.clone();
+        if let Some(k) = storage.get(&[current.clone(), vec![RIGHT]].concat()) {
             current.push(RIGHT);
             loop {
-                match storage.get(&[current, vec![LEFT]].concat()) {
+                match storage.get(&[current.clone(), vec![LEFT]].concat()) {
                     Some(j) => current.push(LEFT),
                     None => return Ok(current),
                 }
@@ -196,6 +211,36 @@ where
         BinarySearchTreeIterator::new(self.clone(), storage)
     }
 
+    /// Stringifies the node key for easier reading.
+    /// Useful for debugging.
+    pub fn key_to_string(&self) -> String {
+        self.as_slice()
+            .iter()
+            .map(|b| {
+                if *b > 31 {
+                    String::from_utf8(vec![*b]).unwrap()
+                } else if *b == LEFT {
+                    String::from_str(".L").unwrap()
+                } else if *b == RIGHT {
+                    String::from_str(".R").unwrap()
+                } else {
+                    String::from_str(" ").unwrap()
+                }
+            })
+            .collect()
+    }
+
+    /// Iterates from a specified starting element. Emulates the `Inclusive` and `Exclusive` `Bound`
+    /// behavior in vanilla *cw-storage-plus*, but only on the left side of the range, i.e. the start.
+    ///
+    /// The `exclusive` boolean argument enables this feature. If set to `true`, iteration will start
+    /// *after* the supplied starting element `elem`, as opposed to *at* `elem`.
+    ///
+    /// When `elem` is not found, iteration starts from the next element in order, regardless of what
+    /// `exclusive` is set to.
+    ///
+    /// In both cases, if the resulting starting element is the largest in the tree, an empty iterator
+    /// will be returned.
     pub fn iter_from<'b>(
         &self,
         storage: &'b dyn Storage,
@@ -206,10 +251,11 @@ where
             // Element found
             Ok((key, true)) => {
                 if exclusive {
-                    // todo find second element in order
-                    return self.iter_from_key(storage, &self.next(storage, key)?);
+                    // If lower limit of the iteration range is exclusive, we need to find the biggest element
+                    self.next(storage, key)
+                } else {
+                    Ok(key)
                 }
-                Ok(key)
             }
             // Element not found in the tree
             Ok((key, false)) => {
@@ -217,7 +263,8 @@ where
                 if key == self.key {
                     return Ok(BinarySearchTreeIterator::empty(storage));
                 }
-                return self.iter_from_key(storage, &self.backtrack(key)?);
+                // Find the next biggest (existing) element and iterate from there
+                self.next(storage, key)
             }
             // Probably a storage error
             Err(e) => Err(e),

@@ -37,11 +37,13 @@ where
     /// ```rust
     /// use cw_storage_plus::{SnapshotMap, Strategy};
     ///
-    /// SnapshotMap::<&[u8], &str>::new(
-    ///     "never",
-    ///     "never__check",
-    ///     "never__change",
-    ///     Strategy::EveryBlock
+    /// SnapshotMap::<u64, String>::new(
+    ///     b"never",
+    ///     b"never__key",
+    ///     b"never__check",
+    ///     b"never__change",
+    ///     b"never__height",
+    ///     Strategy::Never
     /// );
     /// ```
     pub const fn new(
@@ -118,16 +120,12 @@ where
             .should_checkpoint(store, &self.serialize_key(&k)?)?
         {
             self.write_change(store, k.clone(), height)?;
-            println!("Wrote change.");
-        } else {
-            println!("Did not write change.");
         }
         self.primary.insert(store, &k, &data)?;
         match self.key_index.insert(store, &k) {
             Err(StdError::GenericErr { .. }) => Ok(()), // just means element already exists
             Err(e) => Err(e),                           // real error
             Ok(_) => Ok(()),
-            _ => panic!(),
         }
     }
 
@@ -168,11 +166,9 @@ where
                 .may_load_at_height(store, &self.serialize_key(&k)?, height)?;
 
         if let Some(r) = snapshot {
-            println!("Snapshot exists.");
             Ok(r)
         } else {
             // otherwise, return current value
-            println!("Snapshot does not exist.");
             self.may_load(store, k)
         }
     }
@@ -222,11 +218,12 @@ where
         &self,
         store: &'b dyn Storage,
         key: K,
+        exclusive: bool,
     ) -> StdResult<SnapshotMapIterator<'a, 'b, K, T, S>> {
         Ok(SnapshotMapIterator::new(
             store,
             self.clone_primary(),
-            self.key_index.iter_from(store, &key)?,
+            self.key_index.iter_from(store, &key, exclusive)?,
         ))
     }
 }
@@ -480,7 +477,6 @@ mod tests {
     fn handle_multiple_writes_in_one_block() {
         let mut storage = MockStorage::new();
 
-        println!("SETUP");
         EVERY.save(&mut storage, "A".to_string(), &5, 1).unwrap();
         EVERY.save(&mut storage, "B".to_string(), &7, 2).unwrap();
         EVERY.save(&mut storage, "C".to_string(), &2, 2).unwrap();

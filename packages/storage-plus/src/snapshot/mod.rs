@@ -160,21 +160,17 @@ where
         let first = self
             .height_index
             .add_suffix(key)
-            .iter_from(store, &height)?
+            .iter_from(store, &height, false)?
             .next();
 
         if let Some(h) = first {
             let snap = self.changelog.add_suffix(key).get(store, &h);
             // if we found a match, return this last one
             if let Some(c) = snap {
-                Ok(Some(c.old))
-            } else {
-                println!("Changeset not found.");
-                Ok(None)
+                return Ok(Some(c.old));
             }
-        } else {
-            Ok(None)
         }
+        Ok(None)
     }
 }
 
