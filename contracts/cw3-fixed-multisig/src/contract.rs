@@ -362,8 +362,8 @@ fn list_votes(
     let suffix = proposal_id.to_ne_bytes();
     let ballots = BALLOTS.add_suffix(&suffix);
     let addresses = match start_address {
-        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?.skip(1),
-        None => VOTER_ADDRESSES.iter(deps.storage).skip(0),
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr, true)?,
+        None => VOTER_ADDRESSES.iter(deps.storage),
     };
 
     let mut votes = vec![];
@@ -403,17 +403,17 @@ fn list_voters(
     let start_address = start_after.map(|addr| Addr::unchecked(addr));
 
     let addresses = match start_address {
-        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?,
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr, true)?,
         None => VOTER_ADDRESSES.iter(deps.storage),
     };
 
     let mut voters = vec![];
     let mut ctr = 0;
     for addr in addresses {
-        let weight = match VOTERS.get(deps.storage, &addr) {
-            Some(weight) => weight,
-            None => continue,
-        };
+        let weight = VOTERS
+            .get(deps.storage, &addr)
+            // If this error is returned, `VOTERS` is out of sync with `VOTER_ADDRESSES`, which shouldn't be possible
+            .ok_or_else(|| StdError::not_found("Voter weight"))?;
         voters.push(VoterDetail {
             addr: addr.to_string(),
             weight,

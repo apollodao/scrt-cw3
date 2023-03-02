@@ -407,8 +407,8 @@ fn list_votes(
     let suffix = proposal_id.to_ne_bytes();
     let ballots = BALLOTS.add_suffix(&suffix);
     let addresses = match start_address {
-        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr)?.skip(1),
-        None => VOTER_ADDRESSES.iter(deps.storage).skip(0),
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr, true)?,
+        None => VOTER_ADDRESSES.iter(deps.storage),
     };
 
     let mut votes = vec![];

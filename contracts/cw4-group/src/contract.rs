@@ -195,9 +195,9 @@ fn list_members(
     let address = maybe_addr(deps.api, start_after)?;
 
     let members_iter = if let Some(start) = address {
-        MEMBERS.iter_from(deps.storage, start)?.skip(1)
+        MEMBERS.iter_from(deps.storage, start, true)?
     } else {
-        MEMBERS.iter(deps.storage).skip(0)
+        MEMBERS.iter(deps.storage)
     };
     let members = members_iter
         .take(limit)
