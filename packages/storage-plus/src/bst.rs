@@ -206,6 +206,24 @@ where
         self.backtrack(key)
     }
 
+    // Return the largest element in the (sub-)tree.
+    pub fn largest<'b>(&self, storage: &'b dyn Storage) -> StdResult<T> {
+        let mut current = self.clone();
+        while !current.right().is_empty(storage) {
+            current = current.right();
+        }
+        current.load(storage)
+    }
+
+    // Return the smallest element in the (sub-)tree.
+    pub fn smallest<'b>(&self, storage: &'b dyn Storage) -> StdResult<T> {
+        let mut current = self.clone();
+        while !current.left().is_empty(storage) {
+            current = current.left();
+        }
+        current.load(storage)
+    }
+
     /// Returns a sorted iter of self, lazily evaluated
     pub fn iter<'b>(&self, storage: &'b dyn Storage) -> BinarySearchTreeIterator<'a, 'b, T, Ser> {
         BinarySearchTreeIterator::new(self.clone(), storage)
@@ -269,14 +287,14 @@ where
             // Probably a storage error
             Err(e) => Err(e),
         }?;
-        self.iter_from_key(storage, &start)
+        Ok(self.iter_from_key(storage, &start))
     }
 
     fn iter_from_key<'b>(
         &self,
         storage: &'b dyn Storage,
         start_key: &[u8],
-    ) -> StdResult<BinarySearchTreeIterator<'a, 'b, T, Ser>> {
+    ) -> BinarySearchTreeIterator<'a, 'b, T, Ser> {
         let mut stack = vec![];
         for i in self.key.len()..start_key.len() + 1 {
             let key = &start_key[0..i];
@@ -295,12 +313,11 @@ where
             };
             stack.push(node);
         }
-        let iter = BinarySearchTreeIterator {
+        BinarySearchTreeIterator {
             current: BinarySearchTree::new(b"iter_root"),
             storage,
             stack,
-        };
-        Ok(iter)
+        }
     }
 }
 
