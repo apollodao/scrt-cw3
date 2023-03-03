@@ -54,19 +54,10 @@ where
 
     pub fn remove_checkpoint(&self, store: &mut dyn Storage, height: u64) -> StdResult<()> {
         let count = self.checkpoints.get(store, &height).unwrap_or_default();
-        println!("Before = {}", count);
         if count <= 1 {
             self.checkpoints.remove(store, &height)?;
-            println!(
-                "Removed. After = {}",
-                self.checkpoints.get(store, &height).unwrap_or_default()
-            );
         } else {
             self.checkpoints.insert(store, &height, &(count - 1))?;
-            println!(
-                "Updated. After = {}",
-                self.checkpoints.get(store, &height).unwrap_or_default()
-            );
         }
         Ok(())
     }
@@ -110,11 +101,6 @@ where
             Strategy::Never => false,
             Strategy::Selected => self.checkpoints.contains(store, &height),
         };
-        println!(
-            "Height {} contains {:?}",
-            height,
-            self.checkpoints.get(store, &height)
-        );
         match has {
             true => Ok(()),
             false => Err(StdError::not_found("checkpoint")),
