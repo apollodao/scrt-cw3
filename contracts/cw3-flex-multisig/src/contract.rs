@@ -273,14 +273,21 @@ pub fn execute_membership_hook(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let response = if let QueryMsg::WithPermit { permit, msg } = msg {
         let addr = deps.api.addr_validate(
-            validate(deps, PREFIX_REVOKED_PERMITS, &permit, String::new(), None)?.as_str(),
+            validate(
+                deps,
+                PREFIX_REVOKED_PERMITS,
+                &permit,
+                env.contract.address.to_string(),
+                None,
+            )?
+            .as_str(),
         )?;
         if is_voter(deps, &addr)? {
             perform_query(deps, env, *msg)
         } else {
             Err(StdError::generic_err(
                 format!(
-                    "Address '{}' is not a registerd voter and thus not permitted to query.",
+                    "Address '{}' is not a registered voter and thus not permitted to query.",
                     addr
                 )
                 .as_str(),
