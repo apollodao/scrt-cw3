@@ -1,4 +1,4 @@
-use secret_cosmwasm_std::Addr;
+use cosmwasm_std::Addr;
 
 use crate::de::KeyDeserialize;
 use crate::helpers::namespaces_with_key;

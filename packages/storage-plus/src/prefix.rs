@@ -3,7 +3,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::marker::PhantomData;
 
-use secret_cosmwasm_std::{Order, Record, StdResult, Storage};
+use cosmwasm_std::{Order, Record, StdResult, Storage};
 use std::ops::Deref;
 
 use crate::bound::{PrefixBound, RawBound};
@@ -296,7 +296,7 @@ fn increment_last_byte(input: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn ensure_proper_range_bounds() {

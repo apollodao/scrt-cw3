@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secret_cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, Uint128, WasmMsg};
 
 /// Cw20ReceiveMsg should be de/serialized under `Receive()` variant in a ExecuteMsg
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]

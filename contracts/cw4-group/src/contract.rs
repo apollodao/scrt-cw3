@@ -1,63 +1,50 @@
-use cw2::set_contract_version;
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    SubMsg,
+};
+
+use cw3_fixed_multisig::contract::is_voter;
+use cw3_fixed_multisig::state::{PREFIX_REVOKED_PERMITS, RESPONSE_BLOCK_SIZE};
 use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
 use cw_utils::maybe_addr;
-#[cfg(not(feature = "library"))]
-use secret_cosmwasm_std::entry_point;
-use secret_cosmwasm_std::{
-    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
-};
+use secret_toolkit::permit::validate;
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, HOOKS, MEMBERS, TOTAL};
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw4-group";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    create(deps, msg.admin, msg.members, env.block.height)?;
-    Ok(Response::default())
-}
-
-// create is the instantiation logic with set_contract_version removed so it can more
-// easily be imported in other contracts
-pub fn create(
-    mut deps: DepsMut,
-    admin: Option<String>,
-    members: Vec<Member>,
-    height: u64,
-) -> Result<(), ContractError> {
-    let admin_addr = admin
+    let admin_addr = msg
+        .admin
         .map(|admin| deps.api.addr_validate(&admin))
         .transpose()?;
     ADMIN.set(deps.branch(), admin_addr)?;
 
     let mut total = 0u64;
-    for member in members.into_iter() {
+    for member in msg.members.into_iter() {
         total += member.weight;
         let member_addr = deps.api.addr_validate(&member.addr)?;
-        MEMBERS.save(deps.storage, member_addr, &member.weight, height)?;
+        MEMBERS.save(deps.storage, member_addr, &member.weight, env.block.height)?;
     }
     TOTAL.save(deps.storage, &total)?;
-
-    Ok(())
+    Ok(Response::default())
 }
 
 // And declare a custom Error variant for the ones where you will want to make use of it
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -65,7 +52,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     let api = deps.api;
-    match msg {
+    let response = match msg {
         ExecuteMsg::UpdateAdmin { admin } => Ok(ADMIN.execute_update_admin(
             deps,
             info,
@@ -82,7 +69,8 @@ pub fn execute(
         ExecuteMsg::RemoveHook { addr } => {
             Ok(HOOKS.execute_remove_hook(&ADMIN, deps, info, api.addr_validate(&addr)?)?)
         }
-    }
+    };
+    pad_handle_result(response, RESPONSE_BLOCK_SIZE)
 }
 
 pub fn execute_update_members(
@@ -152,8 +140,28 @@ pub fn update_members(
     Ok(MemberChangedHookMsg { diffs })
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+#[entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let response = if let QueryMsg::WithPermit { permit, msg } = msg {
+        let addr = deps.api.addr_validate(
+            validate(deps, PREFIX_REVOKED_PERMITS, &permit, String::new(), None)?.as_str(),
+        )?;
+        if is_voter(deps, &addr)? {
+            perform_query(deps, env, *msg)
+        } else {
+            Err(StdError::generic_err(
+                format!("Address '{}' is not permitted to query.", addr).as_str(),
+            ))
+        }
+    } else {
+        Err(StdError::generic_err(
+            "A permit is required to make queries.",
+        ))
+    };
+    pad_query_result(response, RESPONSE_BLOCK_SIZE)
+}
+
+fn perform_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Member {
             addr,
@@ -165,6 +173,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalWeight {} => to_binary(&query_total_weight(deps)?),
         QueryMsg::Admin {} => to_binary(&ADMIN.query_admin(deps)?),
         QueryMsg::Hooks {} => to_binary(&HOOKS.query_hooks(deps)?),
+        _ => Err(StdError::generic_err("Recursive query message. A 'with_permit' message cannot contain a 'with_permit' message.")),
     }
 }
 
@@ -213,10 +222,10 @@ fn list_members(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{from_slice, Api, OwnedDeps, Querier, Storage};
     use cw4::{member_key, TOTAL_KEY};
     use cw_controllers::{AdminError, HookError};
-    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use secret_cosmwasm_std::{from_slice, Api, OwnedDeps, Querier, Storage};
 
     const INIT_ADMIN: &str = "juan";
     const USER1: &str = "somebody";

@@ -1,9 +1,7 @@
-use core::panic;
-
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use secret_cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 
 use crate::snapshot::{ChangeSet, Snapshot};
 use crate::{BinarySearchTree, BinarySearchTreeIterator, Strategy};
@@ -284,7 +282,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     type TestMap = SnapshotMap<'static, String, u64>;
     type TestMapCompositeKey<'a> = SnapshotMap<'static, (String, String), u64>;
@@ -559,7 +557,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn changelog_range_works() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
 
@@ -618,7 +616,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn range_simple_string_key() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
         init_data(&EVERY, &mut store);
@@ -649,7 +647,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn range_composite_key() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
         init_data_composite_key(&EVERY_COMPOSITE_KEY, &mut store);
@@ -672,7 +670,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn prefix_range_composite_key() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
         init_data_composite_key(&EVERY_COMPOSITE_KEY, &mut store);
@@ -694,7 +692,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn prefix_composite_key() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
         init_data_composite_key(&EVERY_COMPOSITE_KEY, &mut store);
@@ -712,7 +710,7 @@ mod tests {
     #[test]
     #[cfg(feature = "iterator")]
     fn sub_prefix_composite_key() {
-        use secret_cosmwasm_std::Order;
+        use cosmwasm_std::Order;
 
         let mut store = MockStorage::new();
         init_data_composite_key(&EVERY_COMPOSITE_KEY, &mut store);

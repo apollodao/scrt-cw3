@@ -3,13 +3,13 @@ use std::marker::PhantomData;
 
 use anyhow::bail;
 use anyhow::Result as AnyResult;
-use schemars::JsonSchema;
-use secret_cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use secret_cosmwasm_std::{
+use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
+use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
     Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Storage, SystemError,
     SystemResult,
 };
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -948,8 +948,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::testing::MockQuerier;
-    use secret_cosmwasm_std::{
+    use cosmwasm_std::testing::MockQuerier;
+    use cosmwasm_std::{
         coin, coins, to_binary, AllBalanceResponse, Attribute, BankMsg, BankQuery, Coin, Event,
         OverflowError, OverflowOperation, Reply, StdError, StdResult, SubMsg, WasmMsg,
     };

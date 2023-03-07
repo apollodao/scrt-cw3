@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use secret_cosmwasm_std::{Binary, Reply};
+use cosmwasm_std::{Binary, Reply};
 
 // Protobuf wire types (https://developers.google.com/protocol-buffers/docs/encoding)
 const WIRE_TYPE_LENGTH_DELIMITED: u8 = 2;
@@ -168,8 +168,8 @@ pub enum ParseReplyError {
 mod test {
     use super::*;
     use crate::parse_reply::ParseReplyError::{BrokenUtf8, ParseFailure};
+    use cosmwasm_std::{SubMsgResponse, SubMsgResult};
     use prost::Message;
-    use secret_cosmwasm_std::{SubMsgResponse, SubMsgResult};
     use std::str::from_utf8;
 
     fn encode_bytes(data: &[u8]) -> Vec<u8> {

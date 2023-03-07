@@ -1,7 +1,7 @@
 // this module requires iterator to be useful at all
 #![cfg(feature = "iterator")]
 
-use secret_cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -304,8 +304,8 @@ mod test {
 
     use crate::indexes::test::{index_string_tuple, index_tuple};
     use crate::{Index, MultiIndex, UniqueIndex};
-    use secret_cosmwasm_std::testing::MockStorage;
-    use secret_cosmwasm_std::{MemoryStorage, Order};
+    use cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::{MemoryStorage, Order};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

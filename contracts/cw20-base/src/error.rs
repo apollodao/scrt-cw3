@@ -1,4 +1,4 @@
-use secret_cosmwasm_std::StdError;
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

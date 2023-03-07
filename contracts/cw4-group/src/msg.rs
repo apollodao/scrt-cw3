@@ -1,4 +1,5 @@
 use schemars::JsonSchema;
+use secret_toolkit::permit::Permit;
 use serde::{Deserialize, Serialize};
 
 use cw4::Member;
@@ -49,4 +50,8 @@ pub enum QueryMsg {
     },
     /// Shows all registered hooks. Returns HooksResponse.
     Hooks {},
+    WithPermit {
+        permit: Permit,
+        msg: Box<QueryMsg>,
+    },
 }

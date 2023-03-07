@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
-use cw_storage_plus::Item;
-use secret_cosmwasm_std::{
+use cosmwasm_std::{
     attr, Addr, CustomQuery, Deps, DepsMut, MessageInfo, Response, StdError, StdResult,
 };
+use cw_storage_plus::Item;
 
 // TODO: should the return values end up in utils, so eg. cw4 can import them as well as this module?
 /// Returned from Admin.query_admin()
@@ -101,8 +101,8 @@ impl<'a> Admin<'a> {
 mod tests {
     use super::*;
 
-    use secret_cosmwasm_std::testing::{mock_dependencies, mock_info};
-    use secret_cosmwasm_std::Empty;
+    use cosmwasm_std::testing::{mock_dependencies, mock_info};
+    use cosmwasm_std::Empty;
 
     #[test]
     fn set_and_get_admin() {

@@ -2,7 +2,7 @@ mod map;
 
 pub use map::SnapshotMap;
 
-use secret_cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 use secret_toolkit::serialization::Json;
 use secret_toolkit::storage::Keymap as Map;
 use serde::de::DeserializeOwned;
@@ -181,7 +181,7 @@ pub struct ChangeSet<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     type TestSnapshot = Snapshot<'static, u64>;
 

@@ -1,5 +1,5 @@
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
-use secret_cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

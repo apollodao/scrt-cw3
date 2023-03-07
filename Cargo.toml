@@ -4,8 +4,6 @@ members = [
   "contracts/cw3-flex-multisig",
   "contracts/cw4-group",
 # "contracts/cw4-stake",
-  "contracts/cw20-base",
-  "packages/controllers",
   "packages/cw2",
   "packages/cw3",
   "packages/cw4",
@@ -13,6 +11,13 @@ members = [
   #"packages/multi-test",
   "packages/storage-plus",
   "packages/utils"]
+
+[workspace.dependencies]
+schemars = { version = "0.8.11" }
+serde = { version = "1.0" }
+cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret" }
+cosmwasm-storage = { git = "https://github.com/scrtlabs/cosmwasm", tag = "v1.1.9-secret" }
+secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit",  default-features = false, features = ["permit", "storage"]}
 
 [profile.release.package.cw3-fixed-multisig]
 codegen-units = 1

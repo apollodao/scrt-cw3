@@ -1,32 +1,31 @@
 use std::cmp::Ordering;
 
-#[cfg(not(feature = "library"))]
-use secret_cosmwasm_std::entry_point;
-use secret_cosmwasm_std::{
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
     to_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     Response, StdError, StdResult, Storage,
 };
 
-use cw2::set_contract_version;
 use cw3::{
     ProposalListResponse, ProposalResponse, Status, Vote, VoteInfo, VoteListResponse, VoteResponse,
     VoterDetail, VoterListResponse, VoterResponse,
 };
+use cw3_fixed_multisig::contract::is_voter;
+use cw3_fixed_multisig::msg::QueryMsg;
 use cw3_fixed_multisig::state::{
-    next_id, Ballot, Proposal, Votes, BALLOTS, PROPOSALS, VOTER_ADDRESSES,
+    next_id, Ballot, Proposal, Votes, BALLOTS, PREFIX_REVOKED_PERMITS, PROPOSALS,
+    RESPONSE_BLOCK_SIZE, VOTER_ADDRESSES,
 };
 use cw4::{Cw4Contract, MemberChangedHookMsg, MemberDiff};
 use cw_utils::{Expiration, ThresholdResponse};
+use secret_toolkit::permit::validate;
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::state::{Config, CONFIG};
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw3-flex-multisig";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -45,8 +44,6 @@ pub fn instantiate(
     let total_weight = group_addr.total_weight(&deps.querier)?;
     msg.threshold.validate(total_weight)?;
 
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     let cfg = Config {
         threshold: msg.threshold,
         max_voting_period: msg.max_voting_period,
@@ -58,14 +55,14 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response<Empty>, ContractError> {
-    match msg {
+    let response = match msg {
         ExecuteMsg::Propose {
             title,
             description,
@@ -78,7 +75,8 @@ pub fn execute(
         ExecuteMsg::MemberChangedHook(MemberChangedHookMsg { diffs }) => {
             execute_membership_hook(deps, env, info, diffs)
         }
-    }
+    };
+    pad_handle_result(response, RESPONSE_BLOCK_SIZE)
 }
 
 pub fn execute_propose(
@@ -271,8 +269,32 @@ pub fn execute_membership_hook(
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let response = if let QueryMsg::WithPermit { permit, msg } = msg {
+        let addr = deps.api.addr_validate(
+            validate(deps, PREFIX_REVOKED_PERMITS, &permit, String::new(), None)?.as_str(),
+        )?;
+        if is_voter(deps, &addr)? {
+            perform_query(deps, env, *msg)
+        } else {
+            Err(StdError::generic_err(
+                format!(
+                    "Address '{}' is not a registerd voter and thus not permitted to query.",
+                    addr
+                )
+                .as_str(),
+            ))
+        }
+    } else {
+        Err(StdError::generic_err(
+            "A permit is required to make queries.",
+        ))
+    };
+    pad_query_result(response, RESPONSE_BLOCK_SIZE)
+}
+
+fn perform_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Threshold {} => to_binary(&query_threshold(deps)?),
         QueryMsg::Proposal { proposal_id } => to_binary(&query_proposal(deps, env, proposal_id)?),
@@ -296,7 +318,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Voter { address } => to_binary(&query_voter(deps, address)?),
         QueryMsg::ListVoters { start_after, limit } => {
             to_binary(&list_voters(deps, start_after, limit)?)
-        }
+        },
+        _ => Err(StdError::generic_err("Recursive query message. A 'with_permit' message cannot contain a 'with_permit' message.")),
     }
 }
 
@@ -468,7 +491,7 @@ fn get_proposal(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
 /*
 #[cfg(test)]
 mod tests {
-    use secret_cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, Decimal, Timestamp};
+    use cosmwasm_std::{coin, coins, Addr, BankMsg, Coin, Decimal, Timestamp};
 
     use cw2::ContractVersion;
     use cw4::{Cw4ExecuteMsg, Member};

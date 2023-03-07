@@ -1,8 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::{StdResult, Storage};
 use cw_storage_plus::Item;
-use secret_cosmwasm_std::{StdResult, Storage};
 
 pub const CONTRACT: Item<ContractVersion> = Item::new("contract_info");
 
@@ -57,7 +57,7 @@ pub fn set_contract_version<T: Into<String>, U: Into<String>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn get_and_set_work() {

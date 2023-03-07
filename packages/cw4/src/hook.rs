@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secret_cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, WasmMsg};
+use cosmwasm_std::{to_binary, Binary, CosmosMsg, StdResult, WasmMsg};
 
 /// MemberDiff shows the old and new states for a given cw4 member
 /// They cannot both be None.

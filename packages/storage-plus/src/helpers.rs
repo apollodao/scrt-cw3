@@ -9,7 +9,7 @@ use std::any::type_name;
 
 use crate::keys::Key;
 
-use secret_cosmwasm_std::{from_slice, StdError, StdResult};
+use cosmwasm_std::{from_slice, StdError, StdResult};
 
 /// may_deserialize parses json bytes from storage (Option), returning Ok(None) if no data present
 ///
@@ -123,7 +123,7 @@ pub(crate) fn encode_length(namespace: &[u8]) -> [u8; 2] {
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::{to_vec, StdError};
+    use cosmwasm_std::{to_vec, StdError};
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]

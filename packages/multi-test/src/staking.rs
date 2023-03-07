@@ -1,5 +1,5 @@
+use cosmwasm_std::{Decimal, DistributionMsg, Empty, StakingMsg, StakingQuery};
 use schemars::JsonSchema;
-use secret_cosmwasm_std::{Decimal, DistributionMsg, Empty, StakingMsg, StakingQuery};
 
 use crate::module::FailingModule;
 use crate::Module;

@@ -14,7 +14,7 @@ use crate::keys::{Key, PrimaryKey};
 use crate::path::Path;
 #[cfg(feature = "iterator")]
 use crate::prefix::{namespaced_prefix_range, Prefix};
-use secret_cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_std::{StdError, StdResult, Storage};
 
 #[derive(Debug, Clone)]
 pub struct Map<'a, K, T> {
@@ -268,9 +268,9 @@ mod test {
     use serde::{Deserialize, Serialize};
     use std::ops::Deref;
 
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
     #[cfg(feature = "iterator")]
-    use secret_cosmwasm_std::{Order, StdResult};
+    use cosmwasm_std::{Order, StdResult};
 
     #[cfg(feature = "iterator")]
     use crate::bound::Bounder;

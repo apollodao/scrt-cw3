@@ -1,4 +1,4 @@
-use secret_cosmwasm_std::{Addr, Api, CanonicalAddr, StdResult};
+use cosmwasm_std::{Addr, Api, CanonicalAddr, StdResult};
 
 // this is used for pagination. Maybe we move it into the std lib one day?
 pub fn maybe_canonical(api: &dyn Api, human: Option<Addr>) -> StdResult<Option<CanonicalAddr>> {

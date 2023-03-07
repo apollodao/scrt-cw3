@@ -2,8 +2,8 @@ use std::{any::type_name, marker::PhantomData, str::FromStr};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use secret_cosmwasm_std::{StdError, StdResult, Storage};
-use secret_cosmwasm_storage::to_length_prefixed;
+use cosmwasm_std::{StdError, StdResult, Storage};
+use cosmwasm_storage::to_length_prefixed;
 use secret_toolkit::serialization::{Json, Serde};
 
 const LEFT: u8 = 1;
@@ -382,7 +382,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::{testing::mock_dependencies, Addr};
+    use cosmwasm_std::{testing::mock_dependencies, Addr};
 
     #[test]
     fn bst_iter() {

@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
-use secret_cosmwasm_std::entry_point;
-use secret_cosmwasm_std::{
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint128,
 };
 
@@ -593,10 +593,10 @@ pub fn query_download_logo(deps: Deps) -> StdResult<DownloadLogoResponse> {
 
 #[cfg(test)]
 mod tests {
-    use secret_cosmwasm_std::testing::{
+    use cosmwasm_std::testing::{
         mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info,
     };
-    use secret_cosmwasm_std::{coins, from_binary, Addr, CosmosMsg, StdError, SubMsg, WasmMsg};
+    use cosmwasm_std::{coins, from_binary, Addr, CosmosMsg, StdError, SubMsg, WasmMsg};
 
     use super::*;
     use crate::msg::InstantiateMarketingInfo;

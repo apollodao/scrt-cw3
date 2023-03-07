@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use cw_storage_plus::Map;
-use secret_cosmwasm_std::{
+use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError, SubMsg,
 };
+use cw_storage_plus::Map;
 
 use crate::contracts::{Contract, ContractWrapper};
 use crate::test_helpers::contracts::payout;

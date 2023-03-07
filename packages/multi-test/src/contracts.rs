@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::ops::Deref;
 
-use secret_cosmwasm_std::{
+use cosmwasm_std::{
     from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
     QuerierWrapper, Reply, Response, SubMsg,
 };

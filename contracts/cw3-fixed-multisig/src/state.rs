@@ -3,7 +3,7 @@ use std::{any::type_name, marker::PhantomData};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use secret_cosmwasm_std::{
+use cosmwasm_std::{
     Addr, BlockInfo, CosmosMsg, Decimal, Empty, StdError, StdResult, Storage, Uint128,
 };
 
@@ -15,6 +15,8 @@ use secret_toolkit::{
     storage::{Item, Keymap as Map},
 };
 
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
+pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 // we multiply by this when calculating needed_votes in order to round up properly
 // Note: `10u128.pow(9)` fails as "u128::pow` is not yet stable as a const fn"
 const PRECISION_FACTOR: u128 = 1_000_000_000;
@@ -209,7 +211,7 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::testing::{mock_dependencies, mock_env};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     #[test]
     fn count_votes() {

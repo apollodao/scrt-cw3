@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::{Addr, QuerierWrapper};
 use cw4::Cw4Contract;
 use cw_utils::{Duration, Threshold};
-use secret_cosmwasm_std::{Addr, QuerierWrapper};
 use secret_toolkit::storage::Item;
 
 use crate::error::ContractError;

@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::helpers::{may_deserialize, must_deserialize, nested_namespaces_with_key};
 use crate::keys::Key;
-use secret_cosmwasm_std::{to_vec, StdError, StdResult, Storage};
+use cosmwasm_std::{to_vec, StdError, StdResult, Storage};
 use std::ops::Deref;
 
 #[derive(Debug, Clone)]

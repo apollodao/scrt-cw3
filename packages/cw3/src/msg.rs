@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use cosmwasm_std::{CosmosMsg, Empty};
 use cw_utils::Expiration;
-use secret_cosmwasm_std::{CosmosMsg, Empty};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -47,7 +47,7 @@ pub enum Vote {
 #[cfg(test)]
 mod test {
     use super::*;
-    use secret_cosmwasm_std::to_vec;
+    use cosmwasm_std::to_vec;
 
     #[test]
     fn vote_encoding() {

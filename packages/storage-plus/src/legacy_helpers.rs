@@ -50,7 +50,7 @@ pub(crate) fn remove_with_prefix(storage: &mut dyn Storage, namespace: &[u8], ke
 mod legacy_test {
     use super::*;
     use crate::helpers::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn to_length_prefixed_nested_works() {

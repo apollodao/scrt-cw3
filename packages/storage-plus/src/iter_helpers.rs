@@ -2,8 +2,8 @@
 
 use serde::de::DeserializeOwned;
 
-use secret_cosmwasm_std::Record;
-use secret_cosmwasm_std::{from_slice, StdResult};
+use cosmwasm_std::Record;
+use cosmwasm_std::{from_slice, StdResult};
 
 use crate::de::KeyDeserialize;
 use crate::helpers::encode_length;
@@ -107,7 +107,7 @@ mod test {
 #[cfg(not(feature = "iterator"))]
 mod namespace_test {
     use super::*;
-    use secret_cosmwasm_std::testing::MockStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn test_range() {

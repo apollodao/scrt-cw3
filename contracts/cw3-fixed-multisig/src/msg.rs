@@ -1,9 +1,12 @@
+use std::rc::Rc;
+
 use schemars::JsonSchema;
+use secret_toolkit::permit::Permit;
 use serde::{Deserialize, Serialize};
 
+use cosmwasm_std::{CosmosMsg, Empty};
 use cw3::Vote;
 use cw_utils::{Duration, Expiration, Threshold};
-use secret_cosmwasm_std::{CosmosMsg, Empty};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct InstantiateMsg {
@@ -48,7 +51,9 @@ pub enum QueryMsg {
     /// Return ThresholdResponse
     Threshold {},
     /// Returns ProposalResponse
-    Proposal { proposal_id: u64 },
+    Proposal {
+        proposal_id: u64,
+    },
     /// Returns ProposalListResponse
     ListProposals {
         start_after: Option<u64>,
@@ -60,7 +65,10 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Returns VoteResponse
-    Vote { proposal_id: u64, voter: String },
+    Vote {
+        proposal_id: u64,
+        voter: String,
+    },
     /// Returns VoteListResponse
     ListVotes {
         proposal_id: u64,
@@ -68,10 +76,16 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
     /// Returns VoterInfo
-    Voter { address: String },
+    Voter {
+        address: String,
+    },
     /// Returns VoterListResponse
     ListVoters {
         start_after: Option<String>,
         limit: Option<u32>,
+    },
+    WithPermit {
+        permit: Permit,
+        msg: Box<QueryMsg>,
     },
 }

@@ -2,13 +2,13 @@ use anyhow::{bail, Result as AnyResult};
 use itertools::Itertools;
 use schemars::JsonSchema;
 
-use cosmwasm_storage::{prefixed, prefixed_read};
-use cw_storage_plus::Map;
-use cw_utils::NativeBalance;
-use secret_cosmwasm_std::{
+use cosmwasm_std::{
     coin, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery, Binary,
     BlockInfo, Coin, Event, Querier, Storage,
 };
+use cosmwasm_storage::{prefixed, prefixed_read};
+use cw_storage_plus::Map;
+use cw_utils::NativeBalance;
 
 use crate::app::CosmosRouter;
 use crate::executor::AppResponse;
@@ -215,8 +215,8 @@ mod test {
     use super::*;
 
     use crate::app::MockRouter;
-    use secret_cosmwasm_std::testing::{mock_env, MockApi, MockQuerier, MockStorage};
-    use secret_cosmwasm_std::{coins, from_slice, Empty, StdError};
+    use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::{coins, from_slice, Empty, StdError};
 
     fn query_balance(
         bank: &BankKeeper,
