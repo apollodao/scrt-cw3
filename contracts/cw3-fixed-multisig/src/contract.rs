@@ -1,29 +1,27 @@
 use std::cmp::Ordering;
 
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Order,
-    Response, StdResult,
+    to_binary, Addr, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
+    Response, StdError, StdResult, Storage,
 };
+use secret_toolkit::permit::validate;
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
-use cw2::set_contract_version;
 use cw3::{
     ProposalListResponse, ProposalResponse, Status, Vote, VoteInfo, VoteListResponse, VoteResponse,
     VoterDetail, VoterListResponse, VoterResponse,
 };
-use cw_storage_plus::Bound;
 use cw_utils::{Expiration, ThresholdResponse};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{next_id, Ballot, Config, Proposal, Votes, BALLOTS, CONFIG, PROPOSALS, VOTERS};
+use crate::state::{
+    next_id, Ballot, Config, Proposal, Votes, BALLOTS, CONFIG, PREFIX_REVOKED_PERMITS, PROPOSALS,
+    RESPONSE_BLOCK_SIZE, VOTERS, VOTER_ADDRESSES,
+};
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw3-fixed-multisig";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -37,31 +35,32 @@ pub fn instantiate(
 
     msg.threshold.validate(total_weight)?;
 
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     let cfg = Config {
         threshold: msg.threshold,
         total_weight,
         max_voting_period: msg.max_voting_period,
     };
-    CONFIG.save(deps.storage, &cfg)?;
+    CONFIG
+        .save(deps.storage, &cfg)
+        .map_err(|e| ContractError::Std(e))?;
 
     // add all voters
     for voter in msg.voters.iter() {
         let key = deps.api.addr_validate(&voter.addr)?;
-        VOTERS.save(deps.storage, &key, &voter.weight)?;
+        VOTERS.insert(deps.storage, &key, &voter.weight)?;
+        VOTER_ADDRESSES.insert(deps.storage, &key)?;
     }
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response<Empty>, ContractError> {
-    match msg {
+    let response = match msg {
         ExecuteMsg::Propose {
             title,
             description,
@@ -71,7 +70,8 @@ pub fn execute(
         ExecuteMsg::Vote { proposal_id, vote } => execute_vote(deps, env, info, proposal_id, vote),
         ExecuteMsg::Execute { proposal_id } => execute_execute(deps, env, info, proposal_id),
         ExecuteMsg::Close { proposal_id } => execute_close(deps, env, info, proposal_id),
-    }
+    };
+    pad_handle_result(response, RESPONSE_BLOCK_SIZE)
 }
 
 pub fn execute_propose(
@@ -86,7 +86,7 @@ pub fn execute_propose(
 ) -> Result<Response<Empty>, ContractError> {
     // only members of the multisig can create a proposal
     let vote_power = VOTERS
-        .may_load(deps.storage, &info.sender)?
+        .get(deps.storage, &info.sender)
         .ok_or(ContractError::Unauthorized {})?;
 
     let cfg = CONFIG.load(deps.storage)?;
@@ -115,14 +115,16 @@ pub fn execute_propose(
     };
     prop.update_status(&env.block);
     let id = next_id(deps.storage)?;
-    PROPOSALS.save(deps.storage, id, &prop)?;
+    PROPOSALS.insert(deps.storage, &id, &prop)?;
 
     // add the first yes vote from voter
     let ballot = Ballot {
         weight: vote_power,
         vote: Vote::Yes,
     };
-    BALLOTS.save(deps.storage, (id, &info.sender), &ballot)?;
+    BALLOTS
+        .add_suffix(&id.to_ne_bytes())
+        .insert(deps.storage, &info.sender, &ballot)?;
 
     Ok(Response::new()
         .add_attribute("action", "propose")
@@ -139,14 +141,13 @@ pub fn execute_vote(
     vote: Vote,
 ) -> Result<Response<Empty>, ContractError> {
     // only members of the multisig with weight >= 1 can vote
-    let voter_power = VOTERS.may_load(deps.storage, &info.sender)?;
-    let vote_power = match voter_power {
+    let vote_power = match VOTERS.get(deps.storage, &info.sender) {
         Some(power) if power >= 1 => power,
         _ => return Err(ContractError::Unauthorized {}),
     };
 
     // ensure proposal exists and can be voted on
-    let mut prop = PROPOSALS.load(deps.storage, proposal_id)?;
+    let mut prop = get_proposal(deps.storage, &proposal_id)?;
     if prop.status != Status::Open {
         return Err(ContractError::NotOpen {});
     }
@@ -155,18 +156,22 @@ pub fn execute_vote(
     }
 
     // cast vote if no vote previously cast
-    BALLOTS.update(deps.storage, (proposal_id, &info.sender), |bal| match bal {
+    let suffix = proposal_id.to_ne_bytes();
+    let ballot = match BALLOTS.add_suffix(&suffix).get(deps.storage, &info.sender) {
         Some(_) => Err(ContractError::AlreadyVoted {}),
         None => Ok(Ballot {
             weight: vote_power,
             vote,
         }),
-    })?;
+    }?;
+    BALLOTS
+        .add_suffix(&suffix)
+        .insert(deps.storage, &info.sender, &ballot)?;
 
     // update vote tally
     prop.votes.add_vote(vote, vote_power);
     prop.update_status(&env.block);
-    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
+    PROPOSALS.insert(deps.storage, &proposal_id, &prop)?;
 
     Ok(Response::new()
         .add_attribute("action", "vote")
@@ -183,7 +188,7 @@ pub fn execute_execute(
 ) -> Result<Response, ContractError> {
     // anyone can trigger this if the vote passed
 
-    let mut prop = PROPOSALS.load(deps.storage, proposal_id)?;
+    let mut prop = get_proposal(deps.storage, &proposal_id)?;
     // we allow execution even after the proposal "expiration" as long as all vote come in before
     // that point. If it was approved on time, it can be executed any time.
     if prop.status != Status::Passed {
@@ -192,7 +197,7 @@ pub fn execute_execute(
 
     // set it to executed
     prop.status = Status::Executed;
-    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
+    PROPOSALS.insert(deps.storage, &proposal_id, &prop)?;
 
     // dispatch all proposed messages
     Ok(Response::new()
@@ -210,7 +215,7 @@ pub fn execute_close(
 ) -> Result<Response<Empty>, ContractError> {
     // anyone can trigger this if the vote passed
 
-    let mut prop = PROPOSALS.load(deps.storage, proposal_id)?;
+    let mut prop = get_proposal(deps.storage, &proposal_id)?;
     if [Status::Executed, Status::Rejected, Status::Passed]
         .iter()
         .any(|x| *x == prop.status)
@@ -223,7 +228,7 @@ pub fn execute_close(
 
     // set it to failed
     prop.status = Status::Rejected;
-    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
+    PROPOSALS.insert(deps.storage, &proposal_id, &prop)?;
 
     Ok(Response::new()
         .add_attribute("action", "close")
@@ -231,19 +236,54 @@ pub fn execute_close(
         .add_attribute("proposal_id", proposal_id.to_string()))
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let response = if let QueryMsg::WithPermit { permit, msg } = msg {
+        let addr = deps.api.addr_validate(
+            validate(
+                deps,
+                PREFIX_REVOKED_PERMITS,
+                &permit,
+                env.contract.address.to_string(),
+                None,
+            )?
+            .as_str(),
+        )?;
+        if is_voter(deps, &addr)? {
+            perform_query(deps, env, *msg)
+        } else {
+            Err(StdError::generic_err(
+                format!(
+                    "Address '{}' is not a registered voter and thus not permitted to query.",
+                    addr
+                )
+                .as_str(),
+            ))
+        }
+    } else {
+        Err(StdError::generic_err(
+            "A permit is required to make queries.",
+        ))
+    };
+    pad_query_result(response, RESPONSE_BLOCK_SIZE)
+}
+
+fn perform_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Threshold {} => to_binary(&query_threshold(deps)?),
         QueryMsg::Proposal { proposal_id } => to_binary(&query_proposal(deps, env, proposal_id)?),
         QueryMsg::Vote { proposal_id, voter } => to_binary(&query_vote(deps, proposal_id, voter)?),
         QueryMsg::ListProposals { start_after, limit } => {
-            to_binary(&list_proposals(deps, env, start_after, limit)?)
+            let reverse = false;
+            to_binary(&list_proposals(deps, env, reverse, start_after, limit)?)
         }
         QueryMsg::ReverseProposals {
             start_before,
             limit,
-        } => to_binary(&reverse_proposals(deps, env, start_before, limit)?),
+        } => {
+            let reverse = true;
+            to_binary(&list_proposals(deps, env, reverse, start_before, limit)?)
+        }
         QueryMsg::ListVotes {
             proposal_id,
             start_after,
@@ -252,7 +292,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Voter { address } => to_binary(&query_voter(deps, address)?),
         QueryMsg::ListVoters { start_after, limit } => {
             to_binary(&list_voters(deps, start_after, limit)?)
-        }
+        },
+        _ => Err(StdError::generic_err("Recursive query message. A 'with_permit' message cannot contain a 'with_permit' message.")),
     }
 }
 
@@ -262,7 +303,7 @@ fn query_threshold(deps: Deps) -> StdResult<ThresholdResponse> {
 }
 
 fn query_proposal(deps: Deps, env: Env, id: u64) -> StdResult<ProposalResponse> {
-    let prop = PROPOSALS.load(deps.storage, id)?;
+    let prop = get_proposal(deps.storage, &id)?;
     let status = prop.current_status(&env.block);
     let threshold = prop.threshold.to_response(prop.total_weight);
     Ok(ProposalResponse {
@@ -283,59 +324,51 @@ const DEFAULT_LIMIT: u32 = 10;
 fn list_proposals(
     deps: Deps,
     env: Env,
-    start_after: Option<u64>,
+    reverse: bool,
+    starting_point: Option<u64>,
     limit: Option<u32>,
 ) -> StdResult<ProposalListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(Bound::exclusive);
-    let proposals = PROPOSALS
-        .range(deps.storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|p| map_proposal(&env.block, p))
-        .collect::<StdResult<_>>()?;
+    let start = match starting_point {
+        Some(u) => u + 1,
+        None => 0,
+    } as usize;
 
-    Ok(ProposalListResponse { proposals })
-}
+    let page_keys: Vec<u64> = {
+        if reverse {
+            PROPOSALS
+                .iter_keys(deps.storage)?
+                .rev()
+                .skip(start)
+                .take(limit)
+                .collect::<StdResult<Vec<_>>>()
+        } else {
+            PROPOSALS
+                .iter_keys(deps.storage)?
+                .skip(start)
+                .take(limit)
+                .collect::<StdResult<Vec<_>>>()
+        }?
+    };
 
-fn reverse_proposals(
-    deps: Deps,
-    env: Env,
-    start_before: Option<u64>,
-    limit: Option<u32>,
-) -> StdResult<ProposalListResponse> {
-    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let end = start_before.map(Bound::exclusive);
-    let props: StdResult<Vec<_>> = PROPOSALS
-        .range(deps.storage, None, end, Order::Descending)
-        .take(limit)
-        .map(|p| map_proposal(&env.block, p))
-        .collect();
+    let page = page_keys
+        .iter()
+        .map(|id| {
+            Ok(proposal_to_response(
+                &env.block,
+                (*id, get_proposal(deps.storage, &id)?),
+            ))
+        })
+        .collect::<StdResult<Vec<_>>>()?;
 
-    Ok(ProposalListResponse { proposals: props? })
-}
-
-fn map_proposal(
-    block: &BlockInfo,
-    item: StdResult<(u64, Proposal)>,
-) -> StdResult<ProposalResponse> {
-    item.map(|(id, prop)| {
-        let status = prop.current_status(block);
-        let threshold = prop.threshold.to_response(prop.total_weight);
-        ProposalResponse {
-            id,
-            title: prop.title,
-            description: prop.description,
-            msgs: prop.msgs,
-            status,
-            expires: prop.expires,
-            threshold,
-        }
-    })
+    Ok(ProposalListResponse { proposals: page })
 }
 
 fn query_vote(deps: Deps, proposal_id: u64, voter: String) -> StdResult<VoteResponse> {
     let voter = deps.api.addr_validate(&voter)?;
-    let ballot = BALLOTS.may_load(deps.storage, (proposal_id, &voter))?;
+    let ballot = BALLOTS
+        .add_suffix(&proposal_id.to_ne_bytes())
+        .get(deps.storage, &voter);
     let vote = ballot.map(|b| VoteInfo {
         proposal_id,
         voter: voter.into(),
@@ -352,28 +385,40 @@ fn list_votes(
     limit: Option<u32>,
 ) -> StdResult<VoteListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
+    let start_address = start_after.map(|addr| Addr::unchecked(addr));
 
-    let votes = BALLOTS
-        .prefix(proposal_id)
-        .range(deps.storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            item.map(|(addr, ballot)| VoteInfo {
-                proposal_id,
-                voter: addr.into(),
-                vote: ballot.vote,
-                weight: ballot.weight,
-            })
-        })
-        .collect::<StdResult<_>>()?;
+    let suffix = proposal_id.to_ne_bytes();
+    let ballots = BALLOTS.add_suffix(&suffix);
+    let addresses = match start_address {
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr, true)?,
+        None => VOTER_ADDRESSES.iter(deps.storage),
+    };
+
+    let mut votes = vec![];
+    let mut ctr = 0;
+    for addr in addresses {
+        let ballot = match ballots.get(deps.storage, &addr) {
+            Some(ballot) => ballot,
+            None => continue,
+        };
+        votes.push(VoteInfo {
+            proposal_id,
+            voter: addr.into(),
+            vote: ballot.vote,
+            weight: ballot.weight,
+        });
+        ctr += 1;
+        if ctr == limit {
+            break;
+        }
+    }
 
     Ok(VoteListResponse { votes })
 }
 
 fn query_voter(deps: Deps, voter: String) -> StdResult<VoterResponse> {
     let voter = deps.api.addr_validate(&voter)?;
-    let weight = VOTERS.may_load(deps.storage, &voter)?;
+    let weight = VOTERS.get(deps.storage, &voter);
     Ok(VoterResponse { weight })
 }
 
@@ -383,20 +428,58 @@ fn list_voters(
     limit: Option<u32>,
 ) -> StdResult<VoterListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
+    let start_address = start_after.map(|addr| Addr::unchecked(addr));
 
-    let voters = VOTERS
-        .range(deps.storage, start, None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            item.map(|(addr, weight)| VoterDetail {
-                addr: addr.into(),
-                weight,
-            })
-        })
-        .collect::<StdResult<_>>()?;
+    let addresses = match start_address {
+        Some(addr) => VOTER_ADDRESSES.iter_from(deps.storage, &addr, true)?,
+        None => VOTER_ADDRESSES.iter(deps.storage),
+    };
+
+    let mut voters = vec![];
+    let mut ctr = 0;
+    for addr in addresses {
+        let weight = VOTERS
+            .get(deps.storage, &addr)
+            // If this error is returned, `VOTERS` is out of sync with `VOTER_ADDRESSES`, which shouldn't be possible
+            .ok_or_else(|| StdError::not_found("Voter weight"))?;
+        voters.push(VoterDetail {
+            addr: addr.to_string(),
+            weight,
+        });
+        ctr += 1;
+        if ctr == limit {
+            break;
+        }
+    }
 
     Ok(VoterListResponse { voters })
+}
+
+// Utils
+
+pub fn is_voter(deps: Deps, addr: &Addr) -> StdResult<bool> {
+    Ok(VOTER_ADDRESSES.find(deps.storage, addr)?.1)
+}
+
+fn proposal_to_response(block: &BlockInfo, item: (u64, Proposal)) -> ProposalResponse {
+    let (id, prop) = item;
+    let status = prop.current_status(block);
+    let threshold = prop.threshold.to_response(prop.total_weight);
+    ProposalResponse {
+        id,
+        title: prop.title,
+        description: prop.description,
+        msgs: prop.msgs,
+        status,
+        expires: prop.expires,
+        threshold,
+    }
+}
+
+fn get_proposal(store: &dyn Storage, id: &u64) -> StdResult<Proposal> {
+    PROPOSALS
+        .get(store, id)
+        .ok_or_else(|| StdError::not_found("Proposal"))
 }
 
 #[cfg(test)]
@@ -533,15 +616,6 @@ mod tests {
         // All valid
         let threshold = Threshold::AbsoluteCount { weight: 1 };
         setup_test_case(deps.as_mut(), info, threshold, max_voting_period).unwrap();
-
-        // Verify
-        assert_eq!(
-            ContractVersion {
-                contract: CONTRACT_NAME.to_string(),
-                version: CONTRACT_VERSION.to_string(),
-            },
-            get_contract_version(&deps.storage).unwrap()
-        )
     }
 
     // TODO: query() tests

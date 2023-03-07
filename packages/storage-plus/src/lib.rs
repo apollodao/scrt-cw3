@@ -1,4 +1,5 @@
 mod bound;
+mod bst;
 mod de;
 mod de_old;
 mod endian;
@@ -18,6 +19,7 @@ mod snapshot;
 
 #[cfg(feature = "iterator")]
 pub use bound::{Bound, Bounder, PrefixBound, RawBound};
+pub use bst::{BinarySearchTree, BinarySearchTreeIterator};
 pub use de::KeyDeserialize;
 pub use endian::Endian;
 #[cfg(feature = "iterator")]
@@ -38,5 +40,4 @@ pub use map::Map;
 pub use path::Path;
 #[cfg(feature = "iterator")]
 pub use prefix::{range_with_prefix, Prefix};
-#[cfg(feature = "iterator")]
-pub use snapshot::{SnapshotItem, SnapshotMap, Strategy};
+pub use snapshot::{SnapshotMap, Strategy};

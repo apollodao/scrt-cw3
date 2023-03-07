@@ -104,10 +104,14 @@ mod test {
     const TEST_AMOUNT: u128 = 1000u128;
     const TEST_EXPIRATION: Expiration = Expiration::AtHeight(10);
 
+    fn u128_to_Uint128(u: u128) -> Uint128 {
+        <u128 as Into<Uint128>>::into(u)
+    }
+
     #[test]
     fn can_create_claim() {
         let claim = Claim::new(TEST_AMOUNT, TEST_EXPIRATION);
-        assert_eq!(claim.amount, TEST_AMOUNT.into());
+        assert_eq!(claim.amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(claim.release_at, TEST_EXPIRATION);
     }
 
@@ -137,7 +141,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 TEST_EXPIRATION,
             )
             .unwrap();
@@ -148,7 +152,7 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
         assert_eq!(saved_claims.len(), 1);
-        assert_eq!(saved_claims[0].amount, TEST_AMOUNT.into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(saved_claims[0].release_at, TEST_EXPIRATION);
 
         // Adding another claim to same address, make sure that both claims are saved.
@@ -156,7 +160,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 TEST_EXPIRATION,
             )
             .unwrap();
@@ -167,9 +171,9 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
         assert_eq!(saved_claims.len(), 2);
-        assert_eq!(saved_claims[0].amount, TEST_AMOUNT.into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(saved_claims[0].release_at, TEST_EXPIRATION);
-        assert_eq!(saved_claims[1].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[1].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[1].release_at, TEST_EXPIRATION);
 
         // Adding another claim to different address, make sure that other address only has one claim.
@@ -177,7 +181,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr2"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 TEST_EXPIRATION,
             )
             .unwrap();
@@ -227,7 +231,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -236,7 +240,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(100),
             )
             .unwrap();
@@ -260,9 +264,9 @@ mod test {
 
         assert_eq!(amount, Uint128::zero());
         assert_eq!(saved_claims.len(), 2);
-        assert_eq!(saved_claims[0].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[0].release_at, Expiration::AtHeight(10));
-        assert_eq!(saved_claims[1].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[1].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[1].release_at, Expiration::AtHeight(100));
     }
 
@@ -275,7 +279,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -284,7 +288,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(100),
             )
             .unwrap();
@@ -306,9 +310,9 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
 
-        assert_eq!(amount, TEST_AMOUNT.into());
+        assert_eq!(amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(saved_claims.len(), 1);
-        assert_eq!(saved_claims[0].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[0].release_at, Expiration::AtHeight(100));
     }
 
@@ -321,7 +325,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -330,7 +334,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(100),
             )
             .unwrap();
@@ -352,7 +356,7 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
 
-        assert_eq!(amount, (TEST_AMOUNT + TEST_AMOUNT + 100).into());
+        assert_eq!(amount, u128_to_Uint128(TEST_AMOUNT + TEST_AMOUNT + 100));
         assert_eq!(saved_claims.len(), 0);
     }
 
@@ -365,7 +369,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -374,7 +378,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(100),
             )
             .unwrap();
@@ -398,9 +402,9 @@ mod test {
 
         assert_eq!(amount, Uint128::zero());
         assert_eq!(saved_claims.len(), 2);
-        assert_eq!(saved_claims[0].amount, (TEST_AMOUNT).into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(saved_claims[0].release_at, Expiration::AtHeight(10));
-        assert_eq!(saved_claims[1].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[1].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[1].release_at, Expiration::AtHeight(100));
     }
 
@@ -413,7 +417,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -422,7 +426,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(100),
             )
             .unwrap();
@@ -444,7 +448,7 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
 
-        assert_eq!(amount, (TEST_AMOUNT + TEST_AMOUNT + 100).into());
+        assert_eq!(amount, u128_to_Uint128(TEST_AMOUNT + TEST_AMOUNT + 100));
         assert_eq!(saved_claims.len(), 0);
     }
 
@@ -457,7 +461,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -466,7 +470,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(5),
             )
             .unwrap();
@@ -482,14 +486,14 @@ mod test {
                 Some((TEST_AMOUNT + 50).into()),
             )
             .unwrap();
-        assert_eq!(amount, (TEST_AMOUNT).into());
+        assert_eq!(amount, u128_to_Uint128(TEST_AMOUNT));
 
         let saved_claims = claims
             .0
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
         assert_eq!(saved_claims.len(), 1);
-        assert_eq!(saved_claims[0].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[0].release_at, Expiration::AtHeight(10));
     }
 
@@ -502,7 +506,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -511,7 +515,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                TEST_AMOUNT.into(),
+                u128_to_Uint128(TEST_AMOUNT),
                 Expiration::AtHeight(5),
             )
             .unwrap();
@@ -534,9 +538,9 @@ mod test {
             .load(deps.as_mut().storage, &Addr::unchecked("addr"))
             .unwrap();
         assert_eq!(saved_claims.len(), 2);
-        assert_eq!(saved_claims[0].amount, (TEST_AMOUNT + 100).into());
+        assert_eq!(saved_claims[0].amount, u128_to_Uint128(TEST_AMOUNT + 100));
         assert_eq!(saved_claims[0].release_at, Expiration::AtHeight(10));
-        assert_eq!(saved_claims[1].amount, (TEST_AMOUNT).into());
+        assert_eq!(saved_claims[1].amount, u128_to_Uint128(TEST_AMOUNT));
         assert_eq!(saved_claims[1].release_at, Expiration::AtHeight(5));
     }
 
@@ -549,7 +553,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(10),
             )
             .unwrap();
@@ -573,7 +577,7 @@ mod test {
             .create_claim(
                 deps.as_mut().storage,
                 &Addr::unchecked("addr"),
-                (TEST_AMOUNT + 100).into(),
+                u128_to_Uint128(TEST_AMOUNT + 100),
                 Expiration::AtHeight(10),
             )
             .unwrap();

@@ -10,8 +10,8 @@ homepage = "https://cosmwasm.com"
 
 [dependencies]
 cw-storage-plus = { path = "../storage-plus", version = "0.13.4" }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.8.1"
+cosmwasm-std = { workspace = true }
+schemars = "0.8.11"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 
 [dev-dependencies]

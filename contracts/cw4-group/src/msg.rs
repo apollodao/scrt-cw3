@@ -1,4 +1,5 @@
 use schemars::JsonSchema;
+use secret_toolkit::permit::Permit;
 use serde::{Deserialize, Serialize};
 
 use cw4::Member;
@@ -22,6 +23,7 @@ pub enum ExecuteMsg {
     UpdateMembers {
         remove: Vec<String>,
         add: Vec<Member>,
+        callback_code_hash: Option<String>,
     },
     /// Add a new hook to be informed of all membership changes. Must be called by Admin
     AddHook { addr: String },
@@ -48,4 +50,8 @@ pub enum QueryMsg {
     },
     /// Shows all registered hooks. Returns HooksResponse.
     Hooks {},
+    WithPermit {
+        permit: Permit,
+        msg: Box<QueryMsg>,
+    },
 }

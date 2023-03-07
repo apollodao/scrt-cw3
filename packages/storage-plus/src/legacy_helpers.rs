@@ -117,7 +117,6 @@ mod legacy_test {
         assert_eq!(key.capacity(), key.len());
     }
 
-
     #[test]
     fn prefix_get_set() {
         let mut storage = MockStorage::new();
@@ -132,5 +131,4 @@ mod legacy_test {
         let collision = get_with_prefix(&storage, &other_prefix, b"obar");
         assert_eq!(collision, None);
     }
-
 }

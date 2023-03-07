@@ -1,65 +1,50 @@
-#[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult,
+    attr, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
     SubMsg,
 };
-use cw2::set_contract_version;
+
+use cw3_fixed_multisig::contract::is_voter;
+use cw3_fixed_multisig::state::{PREFIX_REVOKED_PERMITS, RESPONSE_BLOCK_SIZE};
 use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
-use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
+use secret_toolkit::permit::validate;
+use secret_toolkit::utils::{pad_handle_result, pad_query_result};
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{ADMIN, HOOKS, MEMBERS, TOTAL};
 
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:cw4-group";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 // Note, you can use StdResult in some functions where you do not
 // make use of the custom errors
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    create(deps, msg.admin, msg.members, env.block.height)?;
-    Ok(Response::default())
-}
-
-// create is the instantiation logic with set_contract_version removed so it can more
-// easily be imported in other contracts
-pub fn create(
-    mut deps: DepsMut,
-    admin: Option<String>,
-    members: Vec<Member>,
-    height: u64,
-) -> Result<(), ContractError> {
-    let admin_addr = admin
+    let admin_addr = msg
+        .admin
         .map(|admin| deps.api.addr_validate(&admin))
         .transpose()?;
     ADMIN.set(deps.branch(), admin_addr)?;
 
     let mut total = 0u64;
-    for member in members.into_iter() {
+    for member in msg.members.into_iter() {
         total += member.weight;
         let member_addr = deps.api.addr_validate(&member.addr)?;
-        MEMBERS.save(deps.storage, &member_addr, &member.weight, height)?;
+        MEMBERS.save(deps.storage, member_addr, &member.weight, env.block.height)?;
     }
     TOTAL.save(deps.storage, &total)?;
-
-    Ok(())
+    Ok(Response::default())
 }
 
 // And declare a custom Error variant for the ones where you will want to make use of it
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[entry_point]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -67,22 +52,25 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     let api = deps.api;
-    match msg {
+    let response = match msg {
         ExecuteMsg::UpdateAdmin { admin } => Ok(ADMIN.execute_update_admin(
             deps,
             info,
             admin.map(|admin| api.addr_validate(&admin)).transpose()?,
         )?),
-        ExecuteMsg::UpdateMembers { add, remove } => {
-            execute_update_members(deps, env, info, add, remove)
-        }
+        ExecuteMsg::UpdateMembers {
+            add,
+            remove,
+            callback_code_hash,
+        } => execute_update_members(deps, env, info, add, remove, callback_code_hash),
         ExecuteMsg::AddHook { addr } => {
             Ok(HOOKS.execute_add_hook(&ADMIN, deps, info, api.addr_validate(&addr)?)?)
         }
         ExecuteMsg::RemoveHook { addr } => {
             Ok(HOOKS.execute_remove_hook(&ADMIN, deps, info, api.addr_validate(&addr)?)?)
         }
-    }
+    };
+    pad_handle_result(response, RESPONSE_BLOCK_SIZE)
 }
 
 pub fn execute_update_members(
@@ -91,6 +79,7 @@ pub fn execute_update_members(
     info: MessageInfo,
     add: Vec<Member>,
     remove: Vec<String>,
+    code_hash: Option<String>,
 ) -> Result<Response, ContractError> {
     let attributes = vec![
         attr("action", "update_members"),
@@ -103,7 +92,9 @@ pub fn execute_update_members(
     let diff = update_members(deps.branch(), env.block.height, info.sender, add, remove)?;
     // call all registered hooks
     let messages = HOOKS.prepare_hooks(deps.storage, |h| {
-        diff.clone().into_cosmos_msg(h).map(SubMsg::new)
+        diff.clone()
+            .into_cosmos_msg(h, code_hash.clone())
+            .map(SubMsg::new)
     })?;
     Ok(Response::new()
         .add_submessages(messages)
@@ -126,7 +117,7 @@ pub fn update_members(
     // add all new members and update total
     for add in to_add.into_iter() {
         let add_addr = deps.api.addr_validate(&add.addr)?;
-        MEMBERS.update(deps.storage, &add_addr, height, |old| -> StdResult<_> {
+        MEMBERS.update(deps.storage, add_addr, height, |old| -> StdResult<_> {
             total -= old.unwrap_or_default();
             total += add.weight;
             diffs.push(MemberDiff::new(add.addr, old, Some(add.weight)));
@@ -136,12 +127,12 @@ pub fn update_members(
 
     for remove in to_remove.into_iter() {
         let remove_addr = deps.api.addr_validate(&remove)?;
-        let old = MEMBERS.may_load(deps.storage, &remove_addr)?;
+        let old = MEMBERS.may_load(deps.storage, remove_addr.clone())?;
         // Only process this if they were actually in the list before
         if let Some(weight) = old {
             diffs.push(MemberDiff::new(remove, Some(weight), None));
             total -= weight;
-            MEMBERS.remove(deps.storage, &remove_addr, height)?;
+            MEMBERS.remove(deps.storage, remove_addr, height)?;
         }
     }
 
@@ -149,8 +140,35 @@ pub fn update_members(
     Ok(MemberChangedHookMsg { diffs })
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+#[entry_point]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    let response = if let QueryMsg::WithPermit { permit, msg } = msg {
+        let addr = deps.api.addr_validate(
+            validate(
+                deps,
+                PREFIX_REVOKED_PERMITS,
+                &permit,
+                env.contract.address.to_string(),
+                None,
+            )?
+            .as_str(),
+        )?;
+        if is_voter(deps, &addr)? {
+            perform_query(deps, env, *msg)
+        } else {
+            Err(StdError::generic_err(
+                format!("Address '{}' is not permitted to query.", addr).as_str(),
+            ))
+        }
+    } else {
+        Err(StdError::generic_err(
+            "A permit is required to make queries.",
+        ))
+    };
+    pad_query_result(response, RESPONSE_BLOCK_SIZE)
+}
+
+fn perform_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Member {
             addr,
@@ -162,6 +180,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::TotalWeight {} => to_binary(&query_total_weight(deps)?),
         QueryMsg::Admin {} => to_binary(&ADMIN.query_admin(deps)?),
         QueryMsg::Hooks {} => to_binary(&HOOKS.query_hooks(deps)?),
+        _ => Err(StdError::generic_err("Recursive query message. A 'with_permit' message cannot contain a 'with_permit' message.")),
     }
 }
 
@@ -173,8 +192,8 @@ fn query_total_weight(deps: Deps) -> StdResult<TotalWeightResponse> {
 fn query_member(deps: Deps, addr: String, height: Option<u64>) -> StdResult<MemberResponse> {
     let addr = deps.api.addr_validate(&addr)?;
     let weight = match height {
-        Some(h) => MEMBERS.may_load_at_height(deps.storage, &addr, h),
-        None => MEMBERS.may_load(deps.storage, &addr),
+        Some(h) => MEMBERS.may_load_at_height(deps.storage, addr, h),
+        None => MEMBERS.may_load(deps.storage, addr),
     }?;
     Ok(MemberResponse { weight })
 }
@@ -189,19 +208,20 @@ fn list_members(
     limit: Option<u32>,
 ) -> StdResult<MemberListResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let addr = maybe_addr(deps.api, start_after)?;
-    let start = addr.as_ref().map(Bound::exclusive);
+    let address = maybe_addr(deps.api, start_after)?;
 
-    let members = MEMBERS
-        .range(deps.storage, start, None, Order::Ascending)
+    let members_iter = if let Some(start) = address {
+        MEMBERS.iter_from(deps.storage, start, true)?
+    } else {
+        MEMBERS.iter(deps.storage)
+    };
+    let members = members_iter
         .take(limit)
-        .map(|item| {
-            item.map(|(addr, weight)| Member {
-                addr: addr.into(),
-                weight,
-            })
+        .map(|(addr, weight)| Member {
+            addr: addr.into(),
+            weight,
         })
-        .collect::<StdResult<_>>()?;
+        .collect::<Vec<Member>>();
 
     Ok(MemberListResponse { members })
 }
@@ -512,7 +532,11 @@ mod tests {
             },
         ];
         let remove = vec![USER2.into()];
-        let msg = ExecuteMsg::UpdateMembers { remove, add };
+        let msg = ExecuteMsg::UpdateMembers {
+            remove,
+            add,
+            callback_code_hash: None,
+        };
 
         // admin updates properly
         assert_users(&deps, Some(11), Some(6), None, None);
@@ -528,29 +552,8 @@ mod tests {
             MemberDiff::new(USER2, Some(6), None),
         ];
         let hook_msg = MemberChangedHookMsg { diffs };
-        let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1).unwrap());
-        let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2).unwrap());
+        let msg1 = SubMsg::new(hook_msg.clone().into_cosmos_msg(contract1, None).unwrap());
+        let msg2 = SubMsg::new(hook_msg.into_cosmos_msg(contract2, None).unwrap());
         assert_eq!(res.messages, vec![msg1, msg2]);
-    }
-
-    #[test]
-    fn raw_queries_work() {
-        // add will over-write and remove have no effect
-        let mut deps = mock_dependencies();
-        do_instantiate(deps.as_mut());
-
-        // get total from raw key
-        let total_raw = deps.storage.get(TOTAL_KEY.as_bytes()).unwrap();
-        let total: u64 = from_slice(&total_raw).unwrap();
-        assert_eq!(17, total);
-
-        // get member votes from raw key
-        let member2_raw = deps.storage.get(&member_key(USER2)).unwrap();
-        let member2: u64 = from_slice(&member2_raw).unwrap();
-        assert_eq!(6, member2);
-
-        // and execute misses
-        let member3_raw = deps.storage.get(&member_key(USER3));
-        assert_eq!(None, member3_raw);
     }
 }

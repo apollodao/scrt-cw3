@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, from_slice, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Order,
-    Response, StdResult, Storage, SubMsg, Uint128, WasmMsg,
+    coins, from_slice, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response,
+    StdResult, Storage, SubMsg, Uint128, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -11,7 +11,6 @@ use cw4::{
     Member, MemberChangedHookMsg, MemberDiff, MemberListResponse, MemberResponse,
     TotalWeightResponse,
 };
-use cw_storage_plus::Bound;
 use cw_utils::{maybe_addr, NativeBalance};
 
 use crate::error::ContractError;

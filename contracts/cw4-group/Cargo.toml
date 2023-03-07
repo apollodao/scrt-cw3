@@ -28,11 +28,13 @@ library = []
 [dependencies]
 cw-utils = { path = "../../packages/utils", version = "0.13.4" }
 cw2 = { path = "../../packages/cw2", version = "0.13.4" }
+cw3-fixed-multisig = { path = "../cw3-fixed-multisig", version = "0.13.4", features = ["library"] }
 cw4 = { path = "../../packages/cw4", version = "0.13.4" }
 cw-controllers = { path = "../../packages/controllers", version = "0.13.4" }
 cw-storage-plus = { path = "../../packages/storage-plus", version = "0.13.4" }
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
-schemars = "0.8.1"
+cosmwasm-std = { workspace = true }
+schemars = "0.8.11"
+secret-toolkit = { git = "https://github.com/scrtlabs/secret-toolkit",  default-features = false, features = ["utils", "storage", "serialization"]}
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.23" }
 

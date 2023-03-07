@@ -9,7 +9,7 @@ repository = "https://github.com/CosmWasm/cw-plus"
 homepage = "https://cosmwasm.com"
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/scrtlabs/cosmwasm", branch = "secret" }
+cosmwasm-std = { workspace = true }
 cw-storage-plus = { path = "../../packages/storage-plus", version = "0.13.4" }
-schemars = "0.8.1"
+schemars = "0.8.11"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }

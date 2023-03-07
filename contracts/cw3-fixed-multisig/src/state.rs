@@ -1,12 +1,22 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use std::{any::type_name, marker::PhantomData};
 
-use cosmwasm_std::{Addr, BlockInfo, CosmosMsg, Decimal, Empty, StdResult, Storage, Uint128};
+use schemars::JsonSchema;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use cosmwasm_std::{
+    Addr, BlockInfo, CosmosMsg, Decimal, Empty, StdError, StdResult, Storage, Uint128,
+};
 
 use cw3::{Status, Vote};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus::BinarySearchTree;
 use cw_utils::{Duration, Expiration, Threshold};
+use secret_toolkit::{
+    serialization::{Json, Serde},
+    storage::{Item, Keymap as Map},
+};
 
+pub const RESPONSE_BLOCK_SIZE: usize = 256;
+pub const PREFIX_REVOKED_PERMITS: &str = "revoked_permits";
 // we multiply by this when calculating needed_votes in order to round up properly
 // Note: `10u128.pow(9)` fails as "u128::pow` is not yet stable as a const fn"
 const PRECISION_FACTOR: u128 = 1_000_000_000;
@@ -176,16 +186,21 @@ pub struct Ballot {
     pub vote: Vote,
 }
 
+type ProposalID = u64;
+type VoterWeight = u64;
+
 // unique items
-pub const CONFIG: Item<Config> = Item::new("config");
-pub const PROPOSAL_COUNT: Item<u64> = Item::new("proposal_count");
+pub static CONFIG: Item<Config, Json> = Item::new(b"config");
+pub static PROPOSAL_COUNT: Item<u64, Json> = Item::new(b"proposal_count");
 
-// multiple-item map
-pub const BALLOTS: Map<(u64, &Addr), Ballot> = Map::new("votes");
-pub const PROPOSALS: Map<u64, Proposal> = Map::new("proposals");
+// Binary search tree holding the keys for the `VOTERS` and `BALLOTS` maps
+pub static VOTER_ADDRESSES: BinarySearchTree<Addr> = BinarySearchTree::new(b"voter_addresses");
 
-// multiple-item maps
-pub const VOTERS: Map<&Addr, u64> = Map::new("voters");
+// maps
+pub static PROPOSALS: Map<ProposalID, Proposal, Json> = Map::new(b"proposals");
+pub static VOTERS: Map<Addr, VoterWeight, Json> = Map::new(b"voters");
+// suffixed map
+pub static BALLOTS: Map<Addr, Ballot, Json> = Map::new(b"votes");
 
 pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     let id: u64 = PROPOSAL_COUNT.may_load(store)?.unwrap_or_default() + 1;
@@ -196,7 +211,7 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing::mock_env;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env};
 
     #[test]
     fn count_votes() {
